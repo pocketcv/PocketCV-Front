@@ -40,7 +40,7 @@ export default function ChatLIstItem({ data, isContactPage = false }) {
     >
       <div className="flex items-center p-3">
         {data?.profilePicture ? (
-          <Avatar type="lg" image={data.profilePicture} />
+          <Avatar type="lg" image={data.profilePicture} name={data.name} />
         ) : (
           <div className="w-10 h-10 rounded-full bg-[#1E1F24] text-white flex items-center justify-center font-medium text-sm">
             {data?.name?.charAt(0)}

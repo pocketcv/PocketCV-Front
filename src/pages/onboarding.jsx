@@ -142,7 +142,7 @@ export default function OnBoarding() {
           </div>
         </div>
         <div>
-          <Avatar type="xl" image={image} setImage={setImage} />
+          <Avatar type="xl" image={image} setImage={setImage} name={name} />
         </div>
       </div>
     </div>

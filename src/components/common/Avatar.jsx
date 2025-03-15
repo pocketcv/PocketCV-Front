@@ -6,7 +6,7 @@ import PhotoPicker from "./PhotoPicker";
 import PhotoLibrary from "./PhotoLibrary";
 import CapturePhoto from "./CapturePhoto";
 
-export default function Avatar({ type, image, setImage }) {
+export default function Avatar({ type, image, setImage, name }) {
   const [hover, setHover] = useState(false);
   const [showPhotoLibrary, setShowPhotoLibrary] = useState(false);
   const [grabImage, setGrabImage] = useState(false);
@@ -17,6 +17,14 @@ export default function Avatar({ type, image, setImage }) {
     x: 0,
     y: 0,
   });
+
+  const getInitials = (name) => {
+    if (!name) return "";
+    return name.split(" ").map(word => word[0]).join("").toUpperCase();
+  };
+
+  const shouldShowInitials = name === "Test User" && (!image || image === "/default_avatar.png");
+  const initials = shouldShowInitials ? getInitials(name) : "";
 
   const contextMenuOptions = [
     {
@@ -92,15 +100,29 @@ export default function Avatar({ type, image, setImage }) {
     }, 100);
   };
 
+  const renderAvatar = (size) => {
+    if (shouldShowInitials) {
+      return (
+        <div className={`flex items-center justify-center bg-black text-white rounded-full
+          ${size === "sm" ? "h-10 w-10 text-sm" : size === "lg" ? "h-14 w-14 text-lg" : "h-60 w-60 text-4xl"}`}>
+          {initials}
+        </div>
+      );
+    }
+    return (
+      <img 
+        src={image} 
+        alt="avatar" 
+        className={`${size === "sm" ? "h-10 w-10" : size === "lg" ? "h-14 w-14" : "h-60 w-60"} rounded-full object-cover`} 
+      />
+    );
+  };
+
   return (
     <>
       <div className="flex items-center justify-center">
-        {type === "sm" && (
-          <img src={image} alt="avatar" className={`h-10 w-10 rounded-full`} />
-        )}
-        {type === "lg" && (
-          <img src={image} alt="avatar" className={`h-14 w-14 rounded-full`} />
-        )}
+        {type === "sm" && renderAvatar("sm")}
+        {type === "lg" && renderAvatar("lg")}
         {type === "xl" && (
           <div
             className="relative cursor-pointer z-0"
@@ -128,11 +150,7 @@ export default function Avatar({ type, image, setImage }) {
               </span>
             </div>
             <div className="flex items-center justify-center">
-              <img
-                src={image}
-                alt="avatar"
-                className={`h-60 w-60 rounded-full object-cover `}
-              />
+              {renderAvatar("xl")}
             </div>
           </div>
         )}

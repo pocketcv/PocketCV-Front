@@ -22,6 +22,8 @@ export default function MessageBar() {
   const [grabImage, setGrabImage] = useState(false);
   const [{ socket, currentChatUser, userInfo }, dispatch] = useStateProvider();
   const emojiPickerRef = useRef(null);
+
+  console.log(userInfo, currentChatUser,'check here ansh ????');
   
   const photoPickerOnChange = async (e) => {
     const file = e.target.files[0];
@@ -68,15 +70,21 @@ export default function MessageBar() {
   const sendMessage = async () => {
     if (!message.trim()) return;
     try {
+      const storedUserInfo = JSON.parse(localStorage.getItem("userInfo"));
+      if (!storedUserInfo?.id) {
+        console.error("No user ID found in localStorage");
+        return;
+      }
+      
       setMessage("");
       const { data } = await axios.post(ADD_MESSAGE_ROUTE, {
         to: currentChatUser.id,
-        from: userInfo?.id,
+        from: storedUserInfo.id,
         message,
       });
       socket.current.emit("send-msg", {
         to: currentChatUser.id,
-        from: userInfo?.id,
+        from: storedUserInfo.id,
         message: data.message,
       });
       dispatch({

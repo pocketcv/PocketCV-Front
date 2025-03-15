@@ -94,7 +94,7 @@ function VoiceMessage({ message }) {
       }`}
     >
       <div>
-        <Avatar type="lg" image={currentChatUser?.profilePicture} />
+        <Avatar type="lg" image={currentChatUser?.profilePicture} name={currentChatUser?.name} />
       </div>
       <div className="cursor-pointer text-xl">
         {!isPlaying ? (

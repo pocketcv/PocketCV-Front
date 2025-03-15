@@ -62,7 +62,7 @@ export default function ChatHeader() {
     <div className="px-6 py-4 flex justify-between items-center bg-white">
       <div className="flex items-center space-x-4">
         <div className="relative">
-          <Avatar type="sm" image={currentChatUser?.profilePicture} />
+          <Avatar type="sm" image={currentChatUser?.profilePicture} name={currentChatUser?.name} />
           {onlineUsers.includes(currentChatUser?.id) && (
             <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
           )}

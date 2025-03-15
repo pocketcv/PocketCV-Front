@@ -37,70 +37,60 @@ export default function Main() {
   const [redirectLogin, setRedirectLogin] = useState(false);
   const [socketEvent, setSocketEvent] = useState(false);
 
-  const [localEmail, setLocalEmail] = useState(null);
-
+  // Initialize user data from localStorage
   useEffect(() => {
-    const userInfo = localStorage.getItem("userInfo");
-    if (userInfo) {
-      setLocalEmail(JSON.parse(userInfo));
+    const storedUserInfo = localStorage.getItem("userInfo");
+    if (storedUserInfo) {
+      const parsedUserInfo = JSON.parse(storedUserInfo);
+      dispatch({
+        type: reducerCases.SET_USER_INFO,
+        userInfo: parsedUserInfo
+      });
+    } else {
+      setRedirectLogin(true);
     }
   }, []);
 
-  console.log(redirectLogin , 'redirectLogin ????');
-  
-
   useEffect(() => {
-    // if (redirectLogin) router.push("/login");
+    if (redirectLogin) router.push("/");
   }, [redirectLogin]);
 
-  firebaseAuth?.currentUser &&
-    onAuthStateChanged(firebaseAuth, async (currentUser) => {
-      console.log('over here 1', currentUser);
+  // Handle Firebase auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(firebaseAuth, async (currentUser) => {
+      if (!currentUser) {
+        setRedirectLogin(true);
+        return;
+      }
       
-      if (!currentUser) setRedirectLogin(true);
       if (!userInfo && currentUser?.email) {
         const { data } = await axios.post(CHECK_USER_ROUTE, {
           email: currentUser.email,
         });
+        
         if (!data.status) {
           router.push("/");
+          return;
         }
 
+        const userData = {
+          id: data.data.id,
+          email: data.data.email,
+          name: data.data.name,
+          profileImage: data.data.profilePicture,
+          status: data.data.about,
+        };
+
+        localStorage.setItem("userInfo", JSON.stringify(userData));
         dispatch({
           type: reducerCases.SET_USER_INFO,
-          userInfo: {
-            id: data?.data?.id,
-            email: data?.data?.email,
-            name: data?.data?.name,
-            profileImage: data?.data?.profilePicture,
-            status: data?.data?.about,
-          },
+          userInfo: userData,
         });
       }
     });
 
-  const fetchFromDB = async (email) => {
-    const { data } = await axios.post(CHECK_USER_ROUTE, {
-      email: email,
-    });
-
-    dispatch({
-      type: reducerCases.SET_USER_INFO,
-      userInfo: {
-        id: data?.data?.id,
-        email: data?.data?.email,
-        name: data?.data?.name,
-        profileImage: data?.data?.profilePicture,
-        status: data?.data?.about,
-      },
-    });
-  };
-
-  useEffect(() => {
-    if (localEmail && !firebaseAuth?.currentUser) setRedirectLogin(true);
-
-    !firebaseAuth?.currentUser && fetchFromDB(localEmail);
-  }, [firebaseAuth, localEmail]);
+    return () => unsubscribe();
+  }, [userInfo]);
 
   useEffect(() => {
     if (userInfo) {
@@ -216,23 +206,15 @@ export default function Main() {
           <VoiceCall />
         </div>
       )}
-      {!videoCall && !voiceCall && (
-        <>
-          <ChatList />
-          <div className="flex-1 h-screen">
-            {currentChatUser ? (
-              <div className="h-full flex flex-col">
-                {messageSearch && <SearchMessages />}
-                <Chat />
-              </div>
-            ) : (
-              <div className="flex-grow flex items-center justify-center h-screen">
-                <Empty />
-              </div>
-            )}
-          </div>
-        </>
+      {messageSearch && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+          <SearchMessages />
+        </div>
       )}
+      <div className="grid grid-cols-main h-full w-full">
+        <ChatList />
+        {currentChatUser ? <Chat /> : <Empty />}
+      </div>
     </div>
   );
 }
