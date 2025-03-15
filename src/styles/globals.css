@@ -1,0 +1,240 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Orbitron&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+
+.custom-scrollbar::-webkit-scrollbar {
+  height: 8px !important;
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #ffffff3b;
+}
+
+.chat-logo-wrap {
+  width: 200px;
+  height: 200px;
+}
+
+.chat-logo {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.header .header-logo {
+  width: 50px;
+  height: 50px;
+}
+
+.header .header-logo img {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.short-transition {
+  transition: all 300ms ease-in-out !important;
+}
+
+.banner img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-blink {
+  animation: blink 1s infinite;
+}
+
+.chat-bg::after {
+  content: "";
+  display: inline-block;
+  background: url('../../public/chat-bg.png') no-repeat top center;
+  background-size: cover;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: auto;
+  z-index: -1;
+  filter: brightness(0.3);
+}
+
+.chat-lists li {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #fff;
+}
+
+.chat-lists li:not(:last-child) {
+  margin-bottom: 10px;
+}
+
+.bottom-menu svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.bottom-menu li {
+  position: relative;
+  cursor: pointer;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.bottom-menu li div {
+  position: relative;
+}
+
+/* .bottom-menu li.active::after {
+  content: "";
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  position: absolute;
+  top: -22px;
+  left: 0;
+  right: 0;
+  margin: auto;
+  background-color: #DCE8EB;
+  z-index: -1;
+  transition: background-color 300ms ease-in-out, transform 300ms ease-in-out;
+}
+
+.bottom-menu li.active div::after {
+  content: "";
+  width: 30px;
+  height: 24px;
+  border-radius: 10px;
+  display: inline-block;
+  background-color: #35524A;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -5px;
+  margin: auto;
+  z-index: 1;
+  transition: background-color 300ms ease-in-out, transform 300ms ease-in-out;
+} */
+
+.bottom-menu li.active svg {
+  color: #fff;
+}
+
+.bottom-menu li.active span {
+  color: #fff;
+}
+
+/* New Menu Css */
+.bottom-menu .indicator {
+  position: absolute;
+  top: 0;
+  width: 60px;
+  height: 60px;
+  border-bottom-left-radius: 35px;
+  border-bottom-right-radius: 35px;
+  border: 6px solid #35524A;
+  background-color: #35524A;
+  cursor: pointer;
+  transition: 0.5s;
+  z-index: -1;
+}
+.bottom-menu .indicator::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: -25.75px;
+  width: 20px;
+  height: 20px;
+  border-top-right-radius: 20px;
+  box-shadow: 4px -6px 0 2px #35524A;
+}
+
+.bottom-menu .indicator::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: -25.75px;
+  width: 20px;
+  height: 20px;
+  border-top-left-radius: 20px;
+  box-shadow: -4px -6px 0 2px #35524A;
+  z-index: -1;
+}
+
+.bottom-menu .indicator span {
+  display: block;
+  position: absolute;
+  bottom: -5px;
+  left: -11px;
+  width: 70px;
+  height: 70px;
+  border: 4px solid #35524A;
+  border-radius: 50%;
+  transform-origin: bottom;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+  transform: scale(0.85);
+}
+
+.bottom-menu  li:nth-child(2).active ~ .indicator {
+  transform: translateX(calc(73px * 1));
+}
+.bottom-menu  li:nth-child(3).active ~ .indicator {
+  transform: translateX(calc(74px * 2));
+}
+.bottom-menu  li:nth-child(4).active ~ .indicator {
+  transform: translateX(calc(73px * 3));
+}
+
+.dark-blue {
+  background-color: #0C6178;
+  background-color: #35524A;
+}
+
+input::placeholder {
+  color: #fff;
+}
+
+@media all and (min-width: 768px) {
+  .header.sticked {
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+
+  .css-hlgwow {
+    padding: 9px 8px !important;
+  }
+
+  .css-1xc3v61-indicatorContainer {
+    padding: 9px 8px !important;
+  }
+
+  .chat-bg {
+    width: calc(100% - 300px);
+  }
+}
+
+@media all and (min-width: 1024px) {
+  .chat-bg {
+    width: calc(100% - 350px);
+  }
+}
