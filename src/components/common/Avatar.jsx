@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-
 import { FaCamera } from "react-icons/fa";
 import ContextMenu from "./ContextMenu";
 import PhotoPicker from "./PhotoPicker";
@@ -23,7 +22,7 @@ export default function Avatar({ type, image, setImage, name }) {
     return name.split(" ").map(word => word[0]).join("").toUpperCase();
   };
 
-  const shouldShowInitials = name === "Test User" && (!image || image === "/default_avatar.png");
+  const shouldShowInitials = !image || image === "/default_avatar.png" || image === "undefined";
   const initials = shouldShowInitials ? getInitials(name) : "";
 
   const contextMenuOptions = [
@@ -101,20 +100,32 @@ export default function Avatar({ type, image, setImage, name }) {
   };
 
   const renderAvatar = (size) => {
+    const sizeClasses = {
+      sm: "h-10 w-10 text-sm",
+      lg: "h-14 w-14 text-lg",
+      xl: "h-60 w-60 text-4xl"
+    };
+
     if (shouldShowInitials) {
       return (
-        <div className={`flex items-center justify-center bg-black text-white rounded-full
-          ${size === "sm" ? "h-10 w-10 text-sm" : size === "lg" ? "h-14 w-14 text-lg" : "h-60 w-60 text-4xl"}`}>
+        <div className={`flex items-center justify-center bg-[#1E1F24] text-white rounded-full ${sizeClasses[size]}`}>
           {initials}
         </div>
       );
     }
+
     return (
-      <img 
-        src={image} 
-        alt="avatar" 
-        className={`${size === "sm" ? "h-10 w-10" : size === "lg" ? "h-14 w-14" : "h-60 w-60"} rounded-full object-cover`} 
-      />
+      <div className={`${sizeClasses[size]} rounded-full overflow-hidden flex items-center justify-center bg-gray-100`}>
+        <img 
+          src={image} 
+          alt="avatar"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = "/default_avatar.png";
+          }}
+          className="h-full w-full object-cover" 
+        />
+      </div>
     );
   };
 
@@ -146,7 +157,7 @@ export default function Avatar({ type, image, setImage, name }) {
                 id="context-opener"
                 onClick={(e) => showContextMenu(e)}
               >
-                Change <br></br> Profile <br></br> Photo
+                Change <br /> Profile <br /> Photo
               </span>
             </div>
             <div className="flex items-center justify-center">

@@ -14,6 +14,15 @@ const Header = () => {
     setIsOpen(false);
   };
 
+  const handleSmoothScroll = (e, targetId) => {
+    e.preventDefault();
+    const element = document.querySelector(targetId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+      closeMenu();
+    }
+  };
+
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 0) {
@@ -55,7 +64,6 @@ const Header = () => {
         </Link>
         
         <div className="relative">
-          {/* Hamburger Button for Mobile */}
           <button
             className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 focus:outline-none"
             onClick={toggleMenu}
@@ -68,7 +76,6 @@ const Header = () => {
             </div>
           </button>
 
-          {/* Overlay for Mobile */}
           {isOpen && (
             <div
               className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-300"
@@ -77,7 +84,6 @@ const Header = () => {
             />
           )}
 
-          {/* Navigation Menu */}
           <nav
             className={`md:static md:translate-x-0 md:w-auto md:h-auto md:bg-transparent md:shadow-none md:flex
               fixed top-0 right-0 h-screen w-[280px] bg-gradient-to-b from-white to-[#f8f9fa] shadow-2xl z-50 
@@ -85,7 +91,6 @@ const Header = () => {
               ${isOpen ? 'translate-x-0' : 'translate-x-full'}
             `}
           >
-            {/* Mobile Header */}
             <div className="flex justify-between items-center p-5 md:hidden">
               <Link href="/" className="block">
                 <Image 
@@ -107,26 +112,18 @@ const Header = () => {
               </button>
             </div>
 
-            {/* Menu Links */}
             <div className="flex flex-col md:flex-row items-start md:items-center px-5 md:px-0 py-5 md:py-0 space-y-4 md:space-y-0 md:space-x-8">
               {menuItems.map((item, index) => (
-                <Link
+                <a
                   key={index}
                   href={item.href}
-                  className="relative text-gray-700 hover:text-[#1a73e8] transition-colors duration-200 group"
-                  onClick={closeMenu}
+                  className="relative text-gray-700 hover:text-[#1a73e8] transition-colors duration-200 group cursor-pointer"
+                  onClick={(e) => handleSmoothScroll(e, item.href)}
                 >
                   {item.label}
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#1a73e8] transition-all duration-200 group-hover:w-full" />
-                </Link>
+                </a>
               ))}
-              <Link
-                href="/"
-                className="md:ml-4 px-6 py-2 rounded-lg bg-[#1a73e8] text-white font-medium transform transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95"
-                onClick={closeMenu}
-              >
-                Sign In
-              </Link>
             </div>
           </nav>
         </div>
