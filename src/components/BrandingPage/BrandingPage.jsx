@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Link from "next/link";
 import Footer from "../Footer/Footer";
 import Select from 'react-select';
@@ -70,6 +70,47 @@ const customSelectStyles = {
 const BrandingPage = () => {
   const router = useRouter();
   const [{ userInfo, newUser }, dispatch] = useStateProvider();
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState('');
+
+  // Hardcoded QA pairs
+  const qaDatabase = {
+    'hello': 'Hi! How can I help you today?',
+    'hi': 'Hello! How can I assist you?',
+    'what is pocketcv': 'PocketCV is a platform that helps you create professional resumes, connect with recruiters, and manage your job applications all in one place.',
+    'how to create resume': 'To create a resume, sign in with your Google account and use our intuitive resume builder with multiple templates.',
+    'features': 'PocketCV offers Resume Builder, Direct Messaging with recruiters, Portfolio Showcase, and Application Tracking features.',
+    'contact': 'You can reach us through the contact form in the Contact section of our website.',
+    'pricing': 'PocketCV is currently free to use with all features included!',
+    'help': 'I can help you with information about PocketCV, resume creation, and our features. Just ask!'
+  };
+
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    if (!inputMessage.trim()) return;
+
+    // Add user message
+    const newMessages = [...chatMessages, { text: inputMessage, sender: 'user' }];
+    
+    // Generate bot response
+    const lowercaseInput = inputMessage.toLowerCase();
+    let botResponse = "I'm not sure how to help with that. Try asking about PocketCV's features, resume creation, or contact information.";
+    
+    // Check for matching questions in QA database
+    for (const [question, answer] of Object.entries(qaDatabase)) {
+      if (lowercaseInput.includes(question)) {
+        botResponse = answer;
+        break;
+      }
+    }
+
+    // Add bot response
+    newMessages.push({ text: botResponse, sender: 'bot' });
+    
+    setChatMessages(newMessages);
+    setInputMessage('');
+  };
 
   const login = async () => {
     const provider = new GoogleAuthProvider();
@@ -324,7 +365,7 @@ const BrandingPage = () => {
                 <div className="flex space-x-4">
                   <a href="#" className="w-12 h-12 bg-[#1a73e8] rounded-lg flex items-center justify-center text-white transform transition-all duration-300 hover:scale-110 hover:rotate-6">
                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.853 0 2.136 1.445 2.136 2.939v5.667H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                     </svg>
                   </a>
                   <a href="#" className="w-12 h-12 bg-[#1a73e8] rounded-lg flex items-center justify-center text-white transform transition-all duration-300 hover:scale-110 hover:rotate-6">
@@ -384,29 +425,134 @@ const BrandingPage = () => {
         </div>
       </section>
 
-      {/* <section className="connecting-people py-[40px] md:py-[80px]">
-        <div className="container-fluid px-[20px] md:px-[60px] lg:px-[80px] md:flex md:items-center md:justify-between">
-          <div className="connect-people mb-[40px] md:w-[49%] md:mb-0 bg-white p-[30px] rounded-[20px] shadow-lg transform transition-all duration-300 hover:shadow-xl">
-            <div className="mb-[30px]">
-              <img className="block w-full transform transition-all duration-500 hover:scale-105" src="../../../high-five.svg" alt="High Five" />
-            </div>
-            <h3 className="text-[24px] md:text-[28px] font-bold mb-[20px] text-gray-800">Connect with people who can help</h3>
-            <Link className="text-[#1a73e8] border-2 border-[#1a73e8] font-semibold px-[20px] py-[12px] rounded-[12px] block w-full md:w-[300px] text-center transform transition-all duration-300 hover:bg-[#1a73e8] hover:text-white hover:scale-105" href={"#"}>Find people you know</Link>
-          </div>
-          <div className="skills md:w-[49%] bg-white p-[30px] rounded-[20px] shadow-lg transform transition-all duration-300 hover:shadow-xl">
-            <div className="mb-[30px]">
-              <img className="block w-full transform transition-all duration-500 hover:scale-105" src="../../../programming.svg" alt="Programming" />
-            </div>
-            <h3 className="text-[24px] md:text-[28px] font-bold mb-[20px] text-gray-800">Learn the skills you need to succeed</h3>
-            <Select 
-              options={options} 
-              styles={customSelectStyles}
-              placeholder="Choose a skill to learn..."
-              className="w-full"
+      {/* ChatBot */}
+      <div className="fixed bottom-6 right-6 z-[999]">
+        {/* Chat Icon Button */}
+        <button
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          className="w-14 h-14 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center hover:scale-105 transform active:scale-95"
+        >
+          <div className="relative">
+            <img
+              src="https://imgs.search.brave.com/Fl2qeCR5o1nU7E48RwUzoR1qjS1lO9hQdBjjamtT5Uw/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/cG5nYWxsLmNvbS93/cC1jb250ZW50L3Vw/bG9hZHMvMTUvQ2hh/dEJvdC1QTkctUGlj/LnBuZw"
+              alt="ChatBot"
+              className="w-10 h-10 object-contain"
             />
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></div>
           </div>
-        </div>
-      </section> */}
+        </button>
+
+        {/* Chat Window */}
+        {isChatOpen && (
+          <div className="absolute bottom-20 right-0 w-96 bg-white rounded-2xl shadow-2xl transform transition-all duration-300 ease-out flex flex-col" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+            {/* Chat Header */}
+            <div className="bg-gradient-to-r from-[#1a73e8] to-[#4285f4] text-white p-4 rounded-t-2xl flex justify-between items-center flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm">
+                  <img
+                    src="https://imgs.search.brave.com/Fl2qeCR5o1nU7E48RwUzoR1qjS1lO9hQdBjjamtT5Uw/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/cG5nYWxsLmNvbS93/cC1jb250ZW50L3Vw/bG9hZHMvMTUvQ2hh/dEJvdC1QTkctUGlj/LnBuZw"
+                    alt="Assistant"
+                    className="w-6 h-6 object-contain"
+                  />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">PocketCV Assistant</h3>
+                  <p className="text-xs text-white/80">Online • Ready to help</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsChatOpen(false)}
+                className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-colors duration-200"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Chat Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+              {chatMessages.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-full space-y-4 text-center">
+                  <div className="w-16 h-16 rounded-full bg-[#1a73e8]/10 flex items-center justify-center">
+                    <img
+                      src="https://imgs.search.brave.com/Fl2qeCR5o1nU7E48RwUzoR1qjS1lO9hQdBjjamtT5Uw/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/cG5nYWxsLmNvbS93/cC1jb250ZW50L3Vw/bG9hZHMvMTUvQ2hh/dEJvdC1QTkctUGlj/LnBuZw"
+                      alt="Welcome"
+                      className="w-10 h-10 object-contain"
+                    />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-800">Welcome to PocketCV Assistant!</h4>
+                    <p className="text-gray-500 text-sm mt-1">How can I help you today?</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-4">
+                    {Object.keys(qaDatabase).slice(0, 4).map((question, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setInputMessage(question);
+                          handleSendMessage({ preventDefault: () => {} });
+                        }}
+                        className="text-sm px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 hover:border-[#1a73e8] hover:text-[#1a73e8] transition-colors duration-200"
+                      >
+                        {question}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {chatMessages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} items-end space-x-2`}
+                >
+                  {message.sender === 'bot' && (
+                    <div className="w-6 h-6 rounded-full bg-[#1a73e8]/10 flex-shrink-0 flex items-center justify-center">
+                      <img
+                        src="https://imgs.search.brave.com/Fl2qeCR5o1nU7E48RwUzoR1qjS1lO9hQdBjjamtT5Uw/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/cG5nYWxsLmNvbS93/cC1jb250ZW50L3Vw/bG9hZHMvMTUvQ2hh/dEJvdC1QTkctUGlj/LnBuZw"
+                        alt="Assistant"
+                        className="w-4 h-4 object-contain"
+                      />
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[75%] rounded-2xl p-3 ${
+                      message.sender === 'user'
+                        ? 'bg-[#1a73e8] text-white rounded-br-none'
+                        : 'bg-white border border-gray-100 text-gray-800 rounded-bl-none shadow-sm'
+                    }`}
+                  >
+                    {message.text}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Chat Input */}
+            <div className="border-t bg-white rounded-b-2xl flex-shrink-0">
+              <form onSubmit={handleSendMessage} className="p-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    placeholder="Type your message..."
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-2 focus:outline-none focus:border-[#1a73e8] focus:ring-2 focus:ring-[#1a73e8]/20"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-[#1a73e8] text-white p-2 rounded-full hover:bg-[#1557b0] transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/50"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
       <Footer />
     </div>
   )
