@@ -7,12 +7,16 @@ import 'react-toastify/dist/ReactToastify.css';
 
 export default function OnBoarding() {
   const router = useRouter();
-  const [{ userInfo }] = useStateProvider();
+  const [{ userInfo, newUser }] = useStateProvider();
+
+  console.log(userInfo, "onboarding");
 
   useEffect(() => {
-    // Only redirect if there's no user info at all
-    if (!userInfo?.email) router.push("/");
-  }, [userInfo, router]);
+    // Redirect if no user info or if user is not new
+    if (!userInfo?.email || !newUser) {
+      router.push("/");
+    }
+  }, [userInfo, newUser, router]);
 
   return (
     <>

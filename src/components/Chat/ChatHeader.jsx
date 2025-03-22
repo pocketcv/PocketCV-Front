@@ -78,7 +78,7 @@ export default function ChatHeader() {
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <button 
+          {/* <button 
             onClick={handleVoiceCall}
             className="p-2 text-gray-600 hover:text-[#1a73e8] hover:bg-[#1a73e8]/5 rounded-full transition-colors"
           >
@@ -95,7 +95,7 @@ export default function ChatHeader() {
             className="p-2 text-gray-600 hover:text-[#1a73e8] hover:bg-[#1a73e8]/5 rounded-full transition-colors"
           >
             <BiSearchAlt2 className="text-xl" />
-          </button>
+          </button> */}
           <button 
             onClick={(e) => showContextMenu(e)}
             id="context-opener"

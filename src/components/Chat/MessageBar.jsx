@@ -165,13 +165,13 @@ export default function MessageBar() {
                 />
               </div>
             )}
-            <button
+            {/* <button
               className="p-2 text-gray-600 hover:text-[#1a73e8] hover:bg-[#1a73e8]/5 rounded-full transition-colors"
               title="Attach file"
               onClick={() => setGrabImage(true)}
             >
               <ImAttachment className="text-xl" />
-            </button>
+            </button> */}
           </div>
           <div className="flex-1 relative">
             <input

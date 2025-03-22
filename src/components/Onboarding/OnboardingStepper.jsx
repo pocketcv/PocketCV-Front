@@ -3,9 +3,11 @@ import { useRouter } from 'next/router';
 import { useStateProvider } from '@/context/StateContext';
 import { reducerCases } from '@/context/constants';
 import axios from 'axios';
-import { onBoardUserRoute, UPLOAD_RESUME_ROUTE } from '@/utils/ApiRoutes';
+import { onRegisterUserRoute, UPLOAD_RESUME_ROUTE } from '@/utils/ApiRoutes';
 import { motion } from 'framer-motion';
 import { FiUpload, FiCheck } from 'react-icons/fi';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const OnboardingStepper = () => {
     const router = useRouter();
@@ -18,14 +20,20 @@ const OnboardingStepper = () => {
         phone: '',
         about: '',
         resume: null,
-        profileImage: userInfo?.profileImage || '/default_avatar.png'
+        profileImage: userInfo?.profileImage || '/default_avatar.png',
+        userType: ''
     });
 
     const steps = [
         {
+            title: 'Welcome to PocketCV',
+            description: 'Choose your role',
+            icon: '👋'
+        },
+        {
             title: 'Profile Information',
             description: 'Your Profile Details',
-            icon: '👋'
+            icon: '👤'
         },
         {
             title: 'Resume',
@@ -47,12 +55,12 @@ const OnboardingStepper = () => {
         if (!file) return;
 
         if (file.type !== 'application/pdf') {
-            alert('Please upload a PDF file');
+            toast.error('Please upload a PDF file');
             return;
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            alert('File size should be less than 5MB');
+            toast.error('File size should be less than 5MB');
             return;
         }
 
@@ -62,50 +70,32 @@ const OnboardingStepper = () => {
         }));
     };
 
-    const handleSubmit = async () => {
-        try {
-            const formDataToSend = new FormData();
-            formDataToSend.append('email', formData.email);
-            formDataToSend.append('name', formData.name);
-            formDataToSend.append('about', formData.about);
-            formDataToSend.append('phone', formData.phone);
-            formDataToSend.append('image', formData.profileImage);
-
-            const { data: userData } = await axios.post(onBoardUserRoute, formDataToSend, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-
-            if (userData.status) {
-                if (formData.resume) {
-                    const resumeFormData = new FormData();
-                    resumeFormData.append('file', formData.resume);
-                    resumeFormData.append('userId', userData.user.id);
-
-                    await axios.post(UPLOAD_RESUME_ROUTE, resumeFormData, {
-                        headers: { 'Content-Type': 'multipart/form-data' }
-                    });
+    const validateStep = () => {
+        switch (currentStep) {
+            case 0:
+                if (formData.userType === '') {
+                    toast.error('Please select your role');
+                    return false;
                 }
-
-                const updatedUserInfo = {
-                    ...userData.user,
-                    profileImage: formData.profileImage
-                };
-
-                dispatch({
-                    type: reducerCases.SET_USER_INFO,
-                    userInfo: updatedUserInfo
-                });
-
-                localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
-                router.push('/app');
-            }
-        } catch (error) {
-            console.error('Error during onboarding:', error);
-            alert('Failed to complete onboarding. Please try again.');
+                return true;
+            case 1:
+                if (!formData.name || !formData.email) {
+                    toast.error('Name and email are required');
+                    return false;
+                }
+                return true;
+            case 2:
+                return true; // Resume is optional
+            default:
+                return false;
         }
     };
 
     const nextStep = () => {
+        if (!validateStep()) {
+            return;
+        }
+
         if (currentStep < steps.length - 1) {
             setCurrentStep(prev => prev + 1);
         } else {
@@ -113,9 +103,257 @@ const OnboardingStepper = () => {
         }
     };
 
+    const handleSubmit = async () => {
+        try {
+            const payload = {
+                email: formData.email,
+                name: formData.name,
+                about: formData.about || '',
+                phone: formData.phone || '',
+                image: formData.profileImage,
+                userType: formData.userType,
+                status: 'Available'
+            };
+
+            const { data } = await axios.post(onRegisterUserRoute, payload, {
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (data.success) {
+                if (formData.resume) {
+                    const resumeFormData = new FormData();
+                    resumeFormData.append('file', formData.resume);
+                    resumeFormData.append('email', formData.email);
+
+                    await axios.post(UPLOAD_RESUME_ROUTE, resumeFormData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+                }
+
+                const userInfo = {
+                    name: formData.name,
+                    email: formData.email,
+                    profileImage: formData.profileImage,
+                    userType: formData.userType,
+                    status: 'Available'
+                };
+
+                try {
+                    localStorage.setItem('userInfo', JSON.stringify(userInfo));
+                    dispatch({
+                        type: reducerCases.SET_USER_INFO,
+                        userInfo
+                    });
+                    toast.success(data.message || 'Registration successful!');
+                    router.push('/app');
+                } catch (storageError) {
+                    console.error('Error saving user info:', storageError);
+                    // Still proceed with navigation since registration was successful
+                    toast.success(data.message || 'Registration successful!');
+                    router.push('/app');
+                }
+            }
+        } catch (error) {
+            console.error('Error during registration:', error);
+            toast.error(error.response?.data?.message || 'Failed to complete registration. Please try again.');
+        }
+    };
+
     const prevStep = () => {
         if (currentStep > 0) {
             setCurrentStep(prev => prev - 1);
+        }
+    };
+
+    const renderStepContent = () => {
+        switch (currentStep) {
+            case 0:
+                return (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex flex-col items-center gap-8 p-8 max-w-2xl mx-auto"
+                    >
+                        <div className="text-center space-y-4">
+                            <motion.h2 
+                                initial={{ scale: 0.9 }}
+                                animate={{ scale: 1 }}
+                                className="text-3xl md:text-4xl font-bold text-primary-strong mb-2"
+                            >
+                                Welcome to PocketCV
+                            </motion.h2>
+                            <motion.p 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                                className="text-lg text-secondary mb-6"
+                            >
+                                Your gateway to professional success
+                            </motion.p>
+                        </div>
+
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.3 }}
+                            className="w-full max-w-md"
+                        >
+                            <h3 className="text-xl text-primary-strong font-medium mb-6 text-center">
+                                Looking for?
+                            </h3>
+                            <div className="flex flex-col gap-4">
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => {
+                                        setFormData(prev => ({ ...prev, userType: 'jobseeker' }));
+                                        setCurrentStep(1);
+                                    }}
+                                    className={`w-full p-4 rounded-xl text-left relative overflow-hidden group
+                                        ${formData.userType === 'jobseeker' 
+                                            ? 'bg-blue-600 text-white' 
+                                            : 'bg-white hover:bg-blue-50 text-gray-800'} 
+                                        border-2 border-blue-200 hover:border-blue-300 transition-all duration-200`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-2xl">👔</span>
+                                        <div>
+                                            <h4 className="font-semibold text-lg mb-1">Job Seeker</h4>
+                                            <p className={`text-sm ${formData.userType === 'jobseeker' ? 'text-blue-100' : 'text-gray-600'}`}>
+                                                Find your dream job and showcase your skills
+                                            </p>
+                                        </div>
+                                    </div>
+                                </motion.button>
+
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => {
+                                        setFormData(prev => ({ ...prev, userType: 'business' }));
+                                        setCurrentStep(1);
+                                    }}
+                                    className={`w-full p-4 rounded-xl text-left relative overflow-hidden group
+                                        ${formData.userType === 'business' 
+                                            ? 'bg-green-600 text-white' 
+                                            : 'bg-white hover:bg-green-50 text-gray-800'} 
+                                        border-2 border-green-200 hover:border-green-300 transition-all duration-200`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-2xl">💼</span>
+                                        <div>
+                                            <h4 className="font-semibold text-lg mb-1">Business</h4>
+                                            <p className={`text-sm ${formData.userType === 'business' ? 'text-green-100' : 'text-gray-600'}`}>
+                                                Find talented professionals for your company
+                                            </p>
+                                        </div>
+                                    </div>
+                                </motion.button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                );
+            case 1:
+                return (
+                    <div className="space-y-8">
+                        <div className="grid grid-cols-2 gap-8">
+                            <div>
+                                <label className="block text-sm font-medium text-secondary mb-2">
+                                    Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={handleInputChange}
+                                    className="w-full px-4 py-3 rounded-lg bg-input-background border border-secondary/20 text-primary-strong placeholder-secondary/70 focus:ring-2 focus:ring-icon-green focus:border-icon-green transition-all duration-200"
+                                    placeholder="Enter your name"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-secondary mb-2">
+                                    Email *
+                                </label>
+                                <input
+                                    type="email"
+                                    name="email"
+                                    value={formData.email}
+                                    readOnly
+                                    className="w-full px-4 py-3 rounded-lg bg-input-background border border-secondary/20 text-primary-strong"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-secondary mb-2">
+                                    Phone Number
+                                </label>
+                                <input
+                                    type="tel"
+                                    name="phone"
+                                    value={formData.phone}
+                                    onChange={handleInputChange}
+                                    className="w-full px-4 py-3 rounded-lg bg-input-background border border-secondary/20 text-primary-strong placeholder-secondary/70 focus:ring-2 focus:ring-icon-green focus:border-icon-green transition-all duration-200"
+                                    placeholder="Enter your phone number"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-secondary mb-2">
+                                    About
+                                </label>
+                                <input
+                                    type="text"
+                                    name="about"
+                                    value={formData.about}
+                                    onChange={handleInputChange}
+                                    className="w-full px-4 py-3 rounded-lg bg-input-background border border-secondary/20 text-primary-strong placeholder-secondary/70 focus:ring-2 focus:ring-icon-green focus:border-icon-green transition-all duration-200"
+                                    placeholder="Tell us about yourself"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 2:
+                return (
+                    <div className="space-y-6">
+                        <div className="flex flex-col items-center justify-center border-2 border-dashed border-secondary/30 rounded-2xl p-12 transition-all duration-200 hover:border-icon-green hover:bg-input-background">
+                            <div className="space-y-4 text-center">
+                                <div className="text-secondary">
+                                    {formData.resume ? (
+                                        <motion.div
+                                            initial={{ scale: 0 }}
+                                            animate={{ scale: 1 }}
+                                            className="flex items-center space-x-2 text-icon-green"
+                                        >
+                                            <FiCheck className="w-5 h-5" />
+                                            <span className="font-medium">{formData.resume.name}</span>
+                                        </motion.div>
+                                    ) : (
+                                        <>
+                                            <FiUpload className="w-12 h-12 mx-auto mb-4 text-icon-green" />
+                                            <p className="text-lg font-medium text-primary-strong">Upload your resume (PDF)</p>
+                                            <p className="text-sm text-secondary">Maximum file size: 5MB</p>
+                                        </>
+                                    )}
+                                </div>
+                                <input
+                                    type="file"
+                                    id="resume"
+                                    accept=".pdf"
+                                    onChange={handleResumeUpload}
+                                    className="hidden"
+                                />
+                                <label
+                                    htmlFor="resume"
+                                    className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-primary-strong bg-icon-green hover:bg-icon-green/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-icon-green transition-all duration-200 cursor-pointer shadow-lg hover:shadow-xl"
+                                >
+                                    {formData.resume ? 'Change File' : 'Select File'}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                );
+            default:
+                return null;
         }
     };
 
@@ -176,103 +414,7 @@ const OnboardingStepper = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4 }}
                 >
-                    {currentStep === 0 && (
-                        <div className="space-y-8">
-                            <div className="grid grid-cols-2 gap-8">
-                                <div>
-                                    <label className="block text-sm font-medium text-secondary mb-2">
-                                        First Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={handleInputChange}
-                                        className="w-full px-4 py-3 rounded-lg bg-input-background border border-secondary/20 text-primary-strong placeholder-secondary/70 focus:ring-2 focus:ring-icon-green focus:border-icon-green transition-all duration-200"
-                                        placeholder="Enter your name"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-secondary mb-2">
-                                        Email
-                                    </label>
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={formData.email}
-                                        readOnly
-                                        className="w-full px-4 py-3 rounded-lg bg-input-background border border-secondary/20 text-primary-strong"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-secondary mb-2">
-                                        Phone Number
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        name="phone"
-                                        value={formData.phone}
-                                        onChange={handleInputChange}
-                                        className="w-full px-4 py-3 rounded-lg bg-input-background border border-secondary/20 text-primary-strong placeholder-secondary/70 focus:ring-2 focus:ring-icon-green focus:border-icon-green transition-all duration-200"
-                                        placeholder="Enter your phone number"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-secondary mb-2">
-                                        About
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="about"
-                                        value={formData.about}
-                                        onChange={handleInputChange}
-                                        className="w-full px-4 py-3 rounded-lg bg-input-background border border-secondary/20 text-primary-strong placeholder-secondary/70 focus:ring-2 focus:ring-icon-green focus:border-icon-green transition-all duration-200"
-                                        placeholder="Tell us about yourself"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {currentStep === 1 && (
-                        <div className="space-y-6">
-                            <div className="flex flex-col items-center justify-center border-2 border-dashed border-secondary/30 rounded-2xl p-12 transition-all duration-200 hover:border-icon-green hover:bg-input-background">
-                                <div className="space-y-4 text-center">
-                                    <div className="text-secondary">
-                                        {formData.resume ? (
-                                            <motion.div
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                className="flex items-center space-x-2 text-icon-green"
-                                            >
-                                                <FiCheck className="w-5 h-5" />
-                                                <span className="font-medium">{formData.resume.name}</span>
-                                            </motion.div>
-                                        ) : (
-                                            <>
-                                                <FiUpload className="w-12 h-12 mx-auto mb-4 text-icon-green" />
-                                                <p className="text-lg font-medium text-primary-strong">Upload your resume (PDF)</p>
-                                                <p className="text-sm text-secondary">Maximum file size: 5MB</p>
-                                            </>
-                                        )}
-                                    </div>
-                                    <input
-                                        type="file"
-                                        id="resume"
-                                        accept=".pdf"
-                                        onChange={handleResumeUpload}
-                                        className="hidden"
-                                    />
-                                    <label
-                                        htmlFor="resume"
-                                        className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-primary-strong bg-icon-green hover:bg-icon-green/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-icon-green transition-all duration-200 cursor-pointer shadow-lg hover:shadow-xl"
-                                    >
-                                        {formData.resume ? 'Change File' : 'Select File'}
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {renderStepContent()}
                 </motion.div>
 
                 {/* Navigation */}

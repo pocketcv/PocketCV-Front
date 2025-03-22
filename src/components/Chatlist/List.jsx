@@ -8,7 +8,7 @@ import { BiArchiveIn, BiBell, BiGroup, BiUserPlus } from "react-icons/bi";
 import { RiInboxArchiveLine } from "react-icons/ri";
 
 export default function List() {
-  const [{ userInfo, userContacts, filteredContacts }, dispatch] = useStateProvider();
+  const [{ userInfo, userContacts, filteredContacts, contactSearch }, dispatch] = useStateProvider();
   const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => {
@@ -36,7 +36,8 @@ export default function List() {
     dispatch({ type: reducerCases.SET_ALL_CONTACTS_PAGE });
   };
 
-  const hasContacts = (filteredContacts?.length > 0 || userContacts?.length > 0);
+  const hasContacts = (userContacts?.length > 0);
+  const displayedContacts = contactSearch ? filteredContacts : userContacts;
 
   return (
     <div className="flex flex-col h-full">
@@ -66,24 +67,22 @@ export default function List() {
       <div className={`flex-1 ${hasContacts ? 'overflow-y-auto' : 'flex items-center justify-center'}`}>
         {hasContacts ? (
           <>
-            {/* Pinned Section */}
-            <div className="px-4 py-2">
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Pinned</h3>
-              {(filteredContacts?.length > 0 ? filteredContacts : userContacts)
-                .filter(contact => contact.isPinned)
-                .map((contact) => (
-                  <ChatLIstItem data={contact} key={contact.id} />
-                ))}
-            </div>
-
             {/* Recent Section */}
             <div className="px-4 py-2">
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Recent</h3>
-              {(filteredContacts?.length > 0 ? filteredContacts : userContacts)
-                .filter(contact => !contact.isPinned)
-                .map((contact) => (
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {contactSearch ? 'Search Results' : 'Recent'}
+              </h3>
+              {displayedContacts?.length > 0 ? (
+                displayedContacts.map((contact) => (
                   <ChatLIstItem data={contact} key={contact.id} />
-                ))}
+                ))
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-gray-500">
+                    {contactSearch ? 'No matches found' : 'No conversations yet'}
+                  </p>
+                </div>
+              )}
             </div>
           </>
         ) : (

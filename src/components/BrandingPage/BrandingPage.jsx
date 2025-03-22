@@ -120,62 +120,54 @@ const BrandingPage = () => {
       } = await signInWithPopup(firebaseAuth, provider);
 
       if (email) {
-        // First check if user exists
-        const { data: checkUserData } = await axios.post(CHECK_USER_ROUTE, {
+        const { data } = await axios.post(CHECK_USER_ROUTE, {
           email,
         });
 
-        let userInfoData;
-        
-        if (!checkUserData.status) {
-          // User doesn't exist, register them first
-          try {
-            const { data: registerData } = await axios.post(onRegisterUserRoute, {
-              email,
-              name,
-              profileImage,
-              status: "Available"
-            });
-            
-            userInfoData = {
-              id: registerData.id,
-              name,
-              email,
-              profileImage,
-              status: "Available",
-            };
-            dispatch({ type: reducerCases.SET_NEW_USER, newUser: true });
-          } catch (registerError) {
-            console.error("Registration error:", registerError);
-            toast.error("Failed to register new user. Please try again.");
-            return;
-          }
-        } else {
-          // Existing user
-          userInfoData = {
-            id: checkUserData.data.id,
-            email: checkUserData.data.email,
-            name: checkUserData.data.name,
-            profileImage: checkUserData.data.profilePicture,
-            status: checkUserData.data.about,
+        console.log(data,'user data check');
+
+        if (data.message === "User not found") {
+          // For new users, set initial user info with Google data
+          const initialUserInfo = {
+            email,
+            name,
+            profileImage,
+            status: "Available"
           };
+
+          // Store initial user info
+          localStorage.setItem("userInfo", JSON.stringify(initialUserInfo));
+          
+          // Set both newUser flag and initial user info
+          dispatch({ type: reducerCases.SET_NEW_USER, newUser: true });
+          dispatch({
+            type: reducerCases.SET_USER_INFO,
+            userInfo: initialUserInfo,
+          });
+
+          router.push("/onboarding");
+        } else {
+          const userInfoData = {
+            id: data.data.id,
+            email: data.data.email,
+            name: data.data.name,
+            profileImage: data.data.profilePicture,
+            status: data.data.about,
+          };
+          
+          localStorage.setItem("userInfo", JSON.stringify(userInfoData));
+          
+          dispatch({
+            type: reducerCases.SET_USER_INFO,
+            userInfo: userInfoData,
+          });
+          
+          router.push("/app");
         }
-        
-        // Store user info in localStorage
-        localStorage.setItem("userInfo", JSON.stringify(userInfoData));
-        
-        // Update Redux state
-        dispatch({
-          type: reducerCases.SET_USER_INFO,
-          userInfo: userInfoData,
-        });
-        
-        // Redirect to onboarding for both new and existing users
-        router.push("/onboarding");
       }
     } catch (error) {
-      console.log({ error });
-      toast.error("Failed to sign in with Google. Please try again.");
+      console.error("Login error:", error);
+      toast.error(error.response?.data?.msg || "Failed to sign in with Google. Please try again.");
     }
   };
 

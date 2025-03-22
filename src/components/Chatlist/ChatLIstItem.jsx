@@ -55,7 +55,7 @@ export default function ChatLIstItem({ data, isContactPage = false }) {
                 <BsPin className="text-[#6B7DFF] text-sm transform rotate-45" />
               )}
               <span className="text-xs text-gray-400 ml-2">
-                {calculateTime(data.createdAt)}
+                {/* {calculateTime(data.createdAt)} */}
               </span>
             </div>
           </div>

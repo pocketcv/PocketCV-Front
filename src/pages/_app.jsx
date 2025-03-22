@@ -5,16 +5,26 @@ import Head from "next/head";
 import { useEffect } from "react";
 import { reducerCases } from "@/context/constants";
 import { Poppins } from 'next/font/google';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const poppins = Poppins({ subsets: ['latin'], weight: ['400', '600', '700'] });
 
 export default function App({ Component, pageProps }) {
   useEffect(() => {
-    // Load user info from localStorage on app start
-    const userInfo = localStorage.getItem("userInfo");
-    if (userInfo) {
-      const user = JSON.parse(userInfo);
-      initialState.userInfo = user;
+    try {
+      const userInfo = localStorage.getItem("userInfo");
+      if (userInfo && userInfo !== "undefined" && userInfo !== "null") {
+        const user = JSON.parse(userInfo);
+        if (user && typeof user === 'object') {
+          initialState.userInfo = user;
+        } else {
+          localStorage.removeItem('userInfo'); // Remove invalid data
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user info:', error);
+      localStorage.removeItem('userInfo'); // Clear invalid data
     }
   }, []);
 
@@ -26,6 +36,18 @@ export default function App({ Component, pageProps }) {
       </Head>
       <main className={poppins.className}>
         <Component {...pageProps} />
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
       </main>
     </StateProvider>
   );
