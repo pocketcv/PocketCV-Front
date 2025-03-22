@@ -170,7 +170,8 @@ const BrandingPage = () => {
           userInfo: userInfoData,
         });
         
-        router.push("/app");
+        // Redirect to onboarding for both new and existing users
+        router.push("/onboarding");
       }
     } catch (error) {
       console.log({ error });
