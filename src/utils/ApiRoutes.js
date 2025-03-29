@@ -1,8 +1,10 @@
-export const HOST = process.env.NEXT_PUBLIC_HOST;
+export const HOST = "http://localhost:9001";
+
+console.log('calling the host >>>> ', HOST);
 
 const authRoute = `${HOST}/api/auth`;
 const MESSAGES_ROUTE = `${HOST}/api/messages`;
-const RESUMES_ROUTE = `${HOST}/api/resumes`;
+const RESUMES_ROUTE = `${HOST}/api/resume`;
 
 export const onBoardUserRoute = `${authRoute}/onboarduser`;
 export const CHECK_USER_ROUTE = `${authRoute}/check-user`;

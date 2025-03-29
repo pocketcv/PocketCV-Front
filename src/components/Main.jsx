@@ -94,7 +94,12 @@ export default function Main() {
 
   useEffect(() => {
     if (userInfo) {
-      socket.current = io(HOST);
+      socket.current = io(HOST, {
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+      });
       socket.current.emit("add-user", userInfo.id);
       dispatch({ type: reducerCases.SET_SOCKET, socket });
     }

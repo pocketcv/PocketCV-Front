@@ -4,7 +4,9 @@ import { useStateProvider } from "@/context/StateContext";
 import { reducerCases } from "@/context/constants";
 
 function Empty() {
-  const [{}, dispatch] = useStateProvider();
+  const [{userInfo}, dispatch] = useStateProvider();
+
+  console.log(userInfo , 'logged in user information');
 
   const handleStartChat = () => {
     dispatch({ type: reducerCases.SET_ALL_CONTACTS_PAGE });
