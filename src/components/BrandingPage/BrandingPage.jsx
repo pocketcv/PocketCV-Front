@@ -9,7 +9,7 @@ import { firebaseAuth } from "../../utils/FirebaseConfig";
 import { useRouter } from "next/router";
 import axios from "axios";
 import { reducerCases } from "../../context/constants";
-import { CHECK_USER_ROUTE, onRegisterUserRoute } from "../../utils/ApiRoutes";
+import { CHECK_USER_ROUTE, onRegisterUserRoute, ASK_GEMINI_ROUTE } from "../../utils/ApiRoutes";
 import { useStateProvider } from '@/context/StateContext';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -74,42 +74,45 @@ const BrandingPage = () => {
   const [chatMessages, setChatMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
 
-  // Hardcoded QA pairs
-  const qaDatabase = {
-    'hello': 'Hi! How can I help you today?',
-    'hi': 'Hello! How can I assist you?',
-    'what is pocketcv': 'PocketCV is a platform that helps you create professional resumes, connect with recruiters, and manage your job applications all in one place.',
-    'how to create resume': 'To create a resume, sign in with your Google account and use our intuitive resume builder with multiple templates.',
-    'features': 'PocketCV offers Resume Builder, Direct Messaging with recruiters, Portfolio Showcase, and Application Tracking features.',
-    'contact': 'You can reach us through the contact form in the Contact section of our website.',
-    'pricing': 'PocketCV is currently free to use with all features included!',
-    'help': 'I can help you with information about PocketCV, resume creation, and our features. Just ask!'
-  };
+  const suggestedQuestions = [
+    "What is PocketCV?",
+    "How to create a resume?",
+    "What features do you offer?",
+    "How can you help me?"
+  ];
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputMessage.trim()) return;
 
     // Add user message
     const newMessages = [...chatMessages, { text: inputMessage, sender: 'user' }];
-    
-    // Generate bot response
-    const lowercaseInput = inputMessage.toLowerCase();
-    let botResponse = "I'm not sure how to help with that. Try asking about PocketCV's features, resume creation, or contact information.";
-    
-    // Check for matching questions in QA database
-    for (const [question, answer] of Object.entries(qaDatabase)) {
-      if (lowercaseInput.includes(question)) {
-        botResponse = answer;
-        break;
-      }
-    }
-
-    // Add bot response
-    newMessages.push({ text: botResponse, sender: 'bot' });
-    
     setChatMessages(newMessages);
     setInputMessage('');
+
+    try {
+      // Call Gemini API
+      const response = await axios.post(ASK_GEMINI_ROUTE, {
+        prompt: inputMessage
+      });
+
+      // Add bot response
+      setChatMessages([...newMessages, { 
+        text: response.data.response, 
+        sender: 'bot'
+      }]);
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      setChatMessages([...newMessages, { 
+        text: "I'm sorry, I'm having trouble processing your request right now. Please try again later.", 
+        sender: 'bot'
+      }]);
+      toast.error('Failed to get AI response');
+    }
+  };
+
+  const clearMessages = () => {
+    setChatMessages([]);
   };
 
   const login = async () => {
@@ -419,133 +422,147 @@ const BrandingPage = () => {
       </section>
 
       {/* ChatBot */}
-      <div className="fixed bottom-6 right-6 z-[999]">
-        {/* Chat Icon Button */}
-        <button
-          onClick={() => setIsChatOpen(!isChatOpen)}
-          className="w-14 h-14 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center hover:scale-105 transform active:scale-95"
-        >
-          <div className="relative">
-            <img
-              src="https://imgs.search.brave.com/Fl2qeCR5o1nU7E48RwUzoR1qjS1lO9hQdBjjamtT5Uw/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/cG5nYWxsLmNvbS93/cC1jb250ZW50L3Vw/bG9hZHMvMTUvQ2hh/dEJvdC1QTkctUGlj/LnBuZw"
-              alt="ChatBot"
-              className="w-10 h-10 object-contain"
-            />
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></div>
-          </div>
-        </button>
-
-        {/* Chat Window */}
-        {isChatOpen && (
-          <div className="absolute bottom-20 right-0 w-96 bg-white rounded-2xl shadow-2xl transform transition-all duration-300 ease-out flex flex-col" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-            {/* Chat Header */}
-            <div className="bg-gradient-to-r from-[#1a73e8] to-[#4285f4] text-white p-4 rounded-t-2xl flex justify-between items-center flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm">
-                  <img
-                    src="https://imgs.search.brave.com/Fl2qeCR5o1nU7E48RwUzoR1qjS1lO9hQdBjjamtT5Uw/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/cG5nYWxsLmNvbS93/cC1jb250ZW50L3Vw/bG9hZHMvMTUvQ2hh/dEJvdC1QTkctUGlj/LnBuZw"
-                    alt="Assistant"
-                    className="w-6 h-6 object-contain"
-                  />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg">PocketCV Assistant</h3>
-                  <p className="text-xs text-white/80">Online • Ready to help</p>
-                </div>
+      {isChatOpen ? (
+        <div className="fixed bottom-4 right-4 z-50 flex flex-col w-96 h-[600px] bg-white rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 transform scale-100 opacity-100">
+          {/* Chat Header */}
+          <div className="bg-gradient-to-r from-[#1a73e8] to-[#4285f4] text-white p-4 flex justify-between items-center flex-shrink-0">
+            <div>
+              <h3 className="font-semibold text-lg">PocketCV Assistant</h3>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                <p className="text-xs text-white/80">AI Powered • Ready to help</p>
               </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={clearMessages}
+                className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-all duration-200"
+                title="Clear messages"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
               <button
                 onClick={() => setIsChatOpen(false)}
-                className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-colors duration-200"
+                className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-all duration-200"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-              {chatMessages.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full space-y-4 text-center">
-                  <div className="w-16 h-16 rounded-full bg-[#1a73e8]/10 flex items-center justify-center">
-                    <img
-                      src="https://imgs.search.brave.com/Fl2qeCR5o1nU7E48RwUzoR1qjS1lO9hQdBjjamtT5Uw/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/cG5nYWxsLmNvbS93/cC1jb250ZW50L3Vw/bG9hZHMvMTUvQ2hh/dEJvdC1QTkctUGlj/LnBuZw"
-                      alt="Welcome"
-                      className="w-10 h-10 object-contain"
-                    />
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-800">Welcome to PocketCV Assistant!</h4>
-                    <p className="text-gray-500 text-sm mt-1">How can I help you today?</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-4">
-                    {Object.keys(qaDatabase).slice(0, 4).map((question, index) => (
-                      <button
-                        key={index}
-                        onClick={() => {
-                          setInputMessage(question);
-                          handleSendMessage({ preventDefault: () => {} });
-                        }}
-                        className="text-sm px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 hover:border-[#1a73e8] hover:text-[#1a73e8] transition-colors duration-200"
-                      >
-                        {question}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {chatMessages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} items-end space-x-2`}
-                >
-                  {message.sender === 'bot' && (
-                    <div className="w-6 h-6 rounded-full bg-[#1a73e8]/10 flex-shrink-0 flex items-center justify-center">
-                      <img
-                        src="https://imgs.search.brave.com/Fl2qeCR5o1nU7E48RwUzoR1qjS1lO9hQdBjjamtT5Uw/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/cG5nYWxsLmNvbS93/cC1jb250ZW50L3Vw/bG9hZHMvMTUvQ2hh/dEJvdC1QTkctUGlj/LnBuZw"
-                        alt="Assistant"
-                        className="w-4 h-4 object-contain"
-                      />
-                    </div>
-                  )}
-                  <div
-                    className={`max-w-[75%] rounded-2xl p-3 ${
-                      message.sender === 'user'
-                        ? 'bg-[#1a73e8] text-white rounded-br-none'
-                        : 'bg-white border border-gray-100 text-gray-800 rounded-bl-none shadow-sm'
-                    }`}
-                  >
-                    {message.text}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Chat Input */}
-            <div className="border-t bg-white rounded-b-2xl flex-shrink-0">
-              <form onSubmit={handleSendMessage} className="p-4">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="text"
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder="Type your message..."
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-2 focus:outline-none focus:border-[#1a73e8] focus:ring-2 focus:ring-[#1a73e8]/20"
-                  />
-                  <button
-                    type="submit"
-                    className="bg-[#1a73e8] text-white p-2 rounded-full hover:bg-[#1557b0] transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-[#1a73e8]/50"
-                  >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-              </form>
-            </div>
           </div>
-        )}
-      </div>
+
+          {/* Chat Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+            {chatMessages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full space-y-6 text-center">
+                <div className="w-20 h-20 rounded-full bg-[#1a73e8]/10 flex items-center justify-center">
+                  <img
+                    src="../../../assistant.png"
+                    alt="Welcome"
+                    className="w-14 h-14 object-contain"
+                  />
+                </div>
+                <div className="max-w-sm">
+                  <h4 className="text-xl font-semibold text-gray-800 mb-2">Welcome to PocketCV Assistant!</h4>
+                  <p className="text-gray-600">I'm your AI-powered assistant, ready to help with resume building, job search, and career advice.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
+                  {suggestedQuestions.map((question, index) => (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        setInputMessage(question);
+                        handleSendMessage({ preventDefault: () => {} });
+                      }}
+                      className="text-sm px-4 py-3 rounded-xl bg-white border-2 border-gray-100 text-gray-700 hover:border-[#1a73e8] hover:bg-[#e8f0fe] hover:shadow-md transition-all duration-200 font-medium"
+                    >
+                      {question}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {chatMessages.map((message, index) => (
+                  <div
+                    key={index}
+                    className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                        message.sender === 'user'
+                          ? 'bg-[#1a73e8] text-white rounded-br-none'
+                          : 'bg-white shadow-sm border border-gray-100 rounded-bl-none'
+                      }`}
+                    >
+                      <p className={`text-sm ${message.sender === 'user' ? 'text-white' : 'text-gray-700'}`}>
+                        {message.text}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Chat Input */}
+          <div className="p-4 bg-white border-t border-gray-100">
+            <form onSubmit={handleSendMessage} className="flex gap-2">
+              <input
+                type="text"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                placeholder="Type your message..."
+                className="flex-1 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-[#1a73e8] focus:ring-2 focus:ring-[#1a73e8]/20 outline-none transition-all duration-200"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setInputMessage('')}
+                  className="px-4 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  disabled={!inputMessage.trim()}
+                  title="Clear input"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#1a73e8] text-white rounded-xl hover:bg-[#1557b0] focus:ring-2 focus:ring-[#1a73e8]/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  disabled={!inputMessage.trim()}
+                >
+                  <svg
+                    className="w-5 h-5 transform rotate-90"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setIsChatOpen(true)}
+          className="fixed bottom-4 right-4 z-50 px-6 py-4 bg-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group"
+        >
+          <span className="font-medium text-gray-700 group-hover:text-[#1a73e8] transition-colors duration-200">
+            Chat with Assistant
+          </span>
+        </button>
+      )}
       <Footer />
     </div>
   )
