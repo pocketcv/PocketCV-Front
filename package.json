@@ -26,6 +26,7 @@
     "react-dom": "18.2.0",
     "react-icons": "^4.12.0",
     "react-image-file-resizer": "^0.4.8",
+    "react-markdown": "^10.1.0",
     "react-phone-input-2": "^2.15.1",
     "react-redux": "^9.2.0",
     "react-select": "^5.8.3",
@@ -35,5 +36,8 @@
     "wavesurfer.js": "^6.6.3",
     "yup": "^1.4.0",
     "zego-express-engine-webrtc": "2.26.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.16"
   }
 }

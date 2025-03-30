@@ -19,10 +19,34 @@ const OnboardingStepper = () => {
     email: userInfo?.email || "",
     phone: "",
     about: "",
+    skills: [],
     resume: null,
     profileImage: userInfo?.profileImage || "/default_avatar.png",
     userType: "",
   });
+
+  const [skillInput, setSkillInput] = useState("");
+
+  const handleSkillInputKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const newSkill = skillInput.trim();
+      if (newSkill && !formData.skills.includes(newSkill)) {
+        setFormData(prev => ({
+          ...prev,
+          skills: [...prev.skills, newSkill]
+        }));
+      }
+      setSkillInput("");
+    }
+  };
+
+  const removeSkill = (skillToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      skills: prev.skills.filter(skill => skill !== skillToRemove)
+    }));
+  };
 
   const steps = [
     {
@@ -68,7 +92,6 @@ const OnboardingStepper = () => {
         ...prev,
         resume: file,
       }));
-      toast.success("Resume selected successfully");
     }
   };
 
@@ -107,6 +130,9 @@ const OnboardingStepper = () => {
 
   const handleFinish = async () => {
     try {
+      // Process skills into an array
+      const processedSkills = formData.skills;
+
       const userData = {
         email: formData.email,
         name: formData.name,
@@ -114,6 +140,7 @@ const OnboardingStepper = () => {
         phoneNumber: formData.phone,
         userType: formData.userType,
         profilePicture: formData.profileImage,
+        skills: processedSkills,
       };
 
       const response = await axios.post(onRegisterUserRoute, userData);
@@ -333,6 +360,41 @@ const OnboardingStepper = () => {
                   className="w-full px-4 py-3 rounded-lg bg-input-background border border-secondary/20 text-primary-strong placeholder-secondary/70 focus:ring-2 focus:ring-icon-green focus:border-icon-green transition-all duration-200"
                   placeholder="Tell us about yourself"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-secondary mb-2">
+                  Skills
+                </label>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2 min-h-[42px] p-2 rounded-lg bg-input-background border border-secondary/20">
+                    {formData.skills.map((skill, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-1 px-3 py-1 bg-[#1a73e8] text-white rounded-full text-sm"
+                      >
+                        {skill}
+                        <button
+                          type="button"
+                          onClick={() => removeSkill(skill)}
+                          className="ml-1 hover:text-red-200 transition-colors"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    <input
+                      type="text"
+                      value={skillInput}
+                      onChange={(e) => setSkillInput(e.target.value)}
+                      onKeyDown={handleSkillInputKeyDown}
+                      className="flex-1 min-w-[120px] bg-transparent text-primary-strong placeholder-secondary/70 focus:outline-none"
+                      placeholder={formData.skills.length === 0 ? "Type a skill and press Enter" : "Add another skill"}
+                    />
+                  </div>
+                  <p className="text-xs text-secondary">
+                    Press Enter or use comma to add a skill
+                  </p>
+                </div>
               </div>
             </div>
           </div>

@@ -1,4 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState } from "react";
+import { useStateProvider } from "@/context/StateContext";
+import { reducerCases } from "@/context/constants";
+import ChatAssistant from "../common/ChatAssistant";
 import Link from "next/link";
 import Footer from "../Footer/Footer";
 import Select from 'react-select';
@@ -8,9 +11,7 @@ import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { firebaseAuth } from "../../utils/FirebaseConfig";
 import { useRouter } from "next/router";
 import axios from "axios";
-import { reducerCases } from "../../context/constants";
 import { CHECK_USER_ROUTE, onRegisterUserRoute, ASK_GEMINI_ROUTE } from "../../utils/ApiRoutes";
-import { useStateProvider } from '@/context/StateContext';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -587,6 +588,7 @@ const BrandingPage = () => {
           </div>
         </button>
       )}
+      <ChatAssistant title="Chat with Assistant" />
       <Footer />
     </div>
   )

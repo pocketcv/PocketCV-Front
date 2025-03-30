@@ -17,6 +17,7 @@ import IncomingCall from "./common/IncomingCall";
 import IncomingVideoCall from "./common/IncomingVideoCall";
 import SearchMessages from "./Chat/SearchMessages";
 import BrandingPage from "./BrandingPage/BrandingPage";
+import ChatAssistant from "./common/ChatAssistant";
 
 export default function Main() {
   const [
@@ -36,6 +37,7 @@ export default function Main() {
   const socket = useRef();
   const [redirectLogin, setRedirectLogin] = useState(false);
   const [socketEvent, setSocketEvent] = useState(false);
+  const [showAssistant, setShowAssistant] = useState(false);
 
   // Initialize user data from localStorage
   useEffect(() => {
@@ -49,59 +51,19 @@ export default function Main() {
     } else {
       setRedirectLogin(true);
     }
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
-    if (redirectLogin) router.push("/");
-  }, [redirectLogin]);
-
-  // Handle Firebase auth state changes
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(firebaseAuth, async (currentUser) => {
-      if (!currentUser) {
-        setRedirectLogin(true);
-        return;
-      }
-      
-      if (!userInfo && currentUser?.email) {
-        const { data } = await axios.post(CHECK_USER_ROUTE, {
-          email: currentUser.email,
-        });
-        
-        if (!data.status) {
-          router.push("/");
-          return;
-        }
-
-        const userData = {
-          id: data.data.id,
-          email: data.data.email,
-          name: data.data.name,
-          profileImage: data.data.profilePicture,
-          status: data.data.about,
-        };
-
-        localStorage.setItem("userInfo", JSON.stringify(userData));
-        dispatch({
-          type: reducerCases.SET_USER_INFO,
-          userInfo: userData,
-        });
-      }
-    });
-
-    return () => unsubscribe();
-  }, [userInfo]);
+    if (redirectLogin) {
+      router.push("/");
+    }
+  }, [redirectLogin, router]);
 
   useEffect(() => {
     if (userInfo) {
-      socket.current = io(HOST, {
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-      });
+      socket.current = io(HOST);
       socket.current.emit("add-user", userInfo.id);
-      dispatch({ type: reducerCases.SET_SOCKET, socket });
+      dispatch({ type: reducerCases.SET_SOCKET, socket: socket.current });
     }
   }, [userInfo]);
 
@@ -116,36 +78,10 @@ export default function Main() {
         });
       });
 
-      socket.current.on("online-users", ({ onlineUsers }) => {
-        dispatch({
-          type: reducerCases.SET_ONLINE_USERS,
-          onlineUsers,
-        });
-      });
-
-      socket.current.on("mark-read-recieve", ({ id, recieverId }) => {
-        dispatch({
-          type: reducerCases.SET_MESSAGES_READ,
-          id,
-          recieverId,
-        });
-      });
-
       socket.current.on("incoming-voice-call", ({ from, roomId, callType }) => {
         dispatch({
           type: reducerCases.SET_INCOMING_VOICE_CALL,
           incomingVoiceCall: { ...from, roomId, callType },
-        });
-      });
-
-      socket.current.on("voice-call-rejected", () => {
-        dispatch({
-          type: reducerCases.SET_INCOMING_VOICE_CALL,
-          incomingVoiceCall: undefined,
-        });
-        dispatch({
-          type: reducerCases.SET_VOICE_CALL,
-          voiceCall: undefined,
         });
       });
 
@@ -156,14 +92,22 @@ export default function Main() {
         });
       });
 
+      socket.current.on("voice-call-rejected", () => {
+        dispatch({
+          type: reducerCases.END_CALL,
+        });
+      });
+
       socket.current.on("video-call-rejected", () => {
         dispatch({
-          type: reducerCases.SET_INCOMING_VIDEO_CALL,
-          incomingVideoCall: undefined,
+          type: reducerCases.END_CALL,
         });
+      });
+
+      socket.current.on("online-users", ({ onlineUsers }) => {
         dispatch({
-          type: reducerCases.SET_VIDEO_CALL,
-          videoCall: undefined,
+          type: reducerCases.SET_ONLINE_USERS,
+          onlineUsers,
         });
       });
 
@@ -171,55 +115,46 @@ export default function Main() {
     }
   }, [socket.current]);
 
-  useEffect(() => {
-    const getMessages = async () => {
-      const {
-        data: { messages },
-      } = await axios.get(
-        `${GET_MESSAGES_ROUTE}/${userInfo.id}/${currentChatUser.id}`
-      );
-      dispatch({ type: reducerCases.SET_MESSAGES, messages });
-    };
-    if (
-      currentChatUser &&
-      userContacts.findIndex((contact) => contact.id === currentChatUser.id) !==
-        -1
-    ) {
-      getMessages();
-    }
-  }, [currentChatUser]);
-
   return (
-    <div className="h-screen w-screen flex bg-gradient-to-br from-[#f8f9fa] to-white">
-      {incomingVoiceCall && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
-          <IncomingCall />
-        </div>
-      )}
-      {incomingVideoCall && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
-          <IncomingVideoCall />
-        </div>
-      )}
+    <>
+      {incomingVideoCall && <IncomingVideoCall />}
+      {incomingVoiceCall && <IncomingCall />}
       {videoCall && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+        <div className="h-screen w-screen max-h-full overflow-hidden">
           <VideoCall />
         </div>
       )}
       {voiceCall && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+        <div className="h-screen w-screen max-h-full overflow-hidden">
           <VoiceCall />
         </div>
       )}
-      {messageSearch && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
-          <SearchMessages />
+      {!videoCall && !voiceCall && (
+        <div className="grid grid-cols-main h-screen w-screen max-h-screen max-w-full overflow-hidden">
+          <ChatList />
+          {currentChatUser ? (
+            <div className={messageSearch ? "grid grid-cols-2" : "grid-cols-2"}>
+              <Chat />
+              {messageSearch && <SearchMessages />}
+            </div>
+          ) : (
+            <div className="relative">
+              <Empty />
+              <button
+                onClick={() => setShowAssistant(!showAssistant)}
+                className="absolute bottom-4 right-4 px-4 py-2 bg-[#1a73e8] text-white rounded-lg hover:bg-[#1557b0] transition-colors shadow-lg"
+              >
+                {showAssistant ? "Close Assistant" : "Ask me"}
+              </button>
+              {showAssistant && (
+                <div className="absolute inset-0 bg-white shadow-lg">
+                  <ChatAssistant title="Ask me" />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
-      <div className="grid grid-cols-main h-full w-full">
-        <ChatList />
-        {currentChatUser ? <Chat /> : <Empty />}
-      </div>
-    </div>
+    </>
   );
 }

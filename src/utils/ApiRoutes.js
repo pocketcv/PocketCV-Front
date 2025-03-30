@@ -1,6 +1,4 @@
-export const HOST = "http://localhost:9001";
-
-console.log('calling the host >>>> ', HOST);
+export const HOST = "https://pocket-cv-backend-six.vercel.app";
 
 const authRoute = `${HOST}/api/auth`;
 const MESSAGES_ROUTE = `${HOST}/api/messages`;
@@ -12,7 +10,9 @@ export const GET_ALL_CONTACTS = `${authRoute}/get-contacts`;
 export const GET_CALL_TOKEN = `${authRoute}/generate-token`;
 export const onRegisterUserRoute = `${authRoute}/register`;
 export const UPDATE_USER_PROFILE = `${authRoute}/update-profile`;
+export const GET_USER_INFO = `${authRoute}/user-info`;
 export const UPLOAD_RESUME_ROUTE = `${RESUMES_ROUTE}/upload`;
+export const DOWNLOAD_RESUME_ROUTE = `${RESUMES_ROUTE}/download`;
 
 export const ADD_MESSAGE_ROUTE = `${MESSAGES_ROUTE}/add-message`;
 export const GET_MESSAGES_ROUTE = `${MESSAGES_ROUTE}/get-messages`;
