@@ -459,11 +459,19 @@ const BrandingPage = () => {
             {chatMessages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full space-y-6 text-center">
                 <div className="w-20 h-20 rounded-full bg-[#1a73e8]/10 flex items-center justify-center">
-                  <img
-                    src="../../../assistant.png"
-                    alt="Welcome"
-                    className="w-14 h-14 object-contain"
-                  />
+                  <svg
+                    className="w-10 h-10 text-[#1a73e8]"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 16v-4" />
+                    <path d="M12 8h.01" />
+                  </svg>
                 </div>
                 <div className="max-w-sm">
                   <h4 className="text-xl font-semibold text-gray-800 mb-2">Welcome to PocketCV Assistant!</h4>
@@ -558,9 +566,25 @@ const BrandingPage = () => {
           onClick={() => setIsChatOpen(true)}
           className="fixed bottom-4 right-4 z-50 px-6 py-4 bg-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group"
         >
-          <span className="font-medium text-gray-700 group-hover:text-[#1a73e8] transition-colors duration-200">
-            Chat with Assistant
-          </span>
+          <div className="flex items-center gap-2">
+            <svg
+              className="w-5 h-5 text-gray-700 group-hover:text-[#1a73e8] transition-colors duration-200"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+              />
+            </svg>
+            <span className="font-medium text-gray-700 group-hover:text-[#1a73e8] transition-colors duration-200">
+              Chat with Assistant
+            </span>
+          </div>
         </button>
       )}
       <Footer />
