@@ -96,13 +96,13 @@ export default function ChatHeader() {
           >
             <BiSearchAlt2 className="text-xl" />
           </button> */}
-          <button 
+          {/* <button 
             onClick={(e) => showContextMenu(e)}
             id="context-opener"
             className="p-2 text-gray-600 hover:text-[#1a73e8] hover:bg-[#1a73e8]/5 rounded-full transition-colors"
           >
             <BsThreeDotsVertical className="text-xl" />
-          </button>
+          </button> */}
         </div>
       </div>
       {isContextMenuVisible && (

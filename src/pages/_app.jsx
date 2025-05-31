@@ -32,7 +32,9 @@ export default function App({ Component, pageProps }) {
     <StateProvider initialState={initialState} reducer={reducer}>
       <Head>
         <title>PocketCV Chat</title>
-        <link rel="shortcut icon" href="/favicon.png" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
+        <meta name="theme-color" content="#1a73e8" />
       </Head>
       <main className={poppins.className}>
         <Component {...pageProps} />

@@ -363,7 +363,12 @@ const OnboardingStepper = () => {
                 </label>
                 <PhoneInput
                   value={formData.phone}
-                  onChange={handleInputChange}
+                  onChange={(e) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      phone: e.target.value
+                    }));
+                  }}
                   required
                 />
               </div>

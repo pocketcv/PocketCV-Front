@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main chat bubble -->
+  <path d="M26 4H6C4.89543 4 4 4.89543 4 6V20C4 21.1046 4.89543 22 6 22H10V27.5858C10 28.4767 11.0771 28.9229 11.7071 28.2929L17 23H26C27.1046 23 28 22.1046 28 21V6C28 4.89543 27.1046 4 26 4Z" fill="#1a73e8"/>
+  <!-- Inner dots -->
+  <circle cx="11" cy="13" r="2" fill="white"/>
+  <circle cx="16" cy="13" r="2" fill="white"/>
+  <circle cx="21" cy="13" r="2" fill="white"/>
+</svg>

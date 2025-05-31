@@ -13,21 +13,37 @@ import { toast } from 'react-toastify';
 // Validation schema
 const validationSchema = Yup.object({
   name: Yup.string()
+    .trim()
     .min(2, 'Name must be at least 2 characters')
     .max(50, 'Name must be less than 50 characters')
+    .matches(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces')
     .required('Name is required'),
   email: Yup.string()
     .email('Invalid email address')
     .required('Email is required'),
   phoneNumber: Yup.string()
     .required('Phone number is required')
-    .min(10, 'Phone number is too short')
-    .max(20, 'Phone number is too long'),
+    .matches(/^\d{10}$/, 'Phone number must be exactly 10 digits'),
   about: Yup.string()
-    .max(500, 'About section must be less than 500 characters'),
+    .trim()
+    .max(500, 'About section must be less than 500 characters')
+    .nullable(),
   skills: Yup.array()
-    .of(Yup.string())
-    .min(1, 'At least one skill is required'),
+    .of(
+      Yup.string()
+        .trim()
+        .min(2, 'Each skill must be at least 2 characters')
+        .max(30, 'Each skill must be less than 30 characters')
+        .matches(/^[a-zA-Z0-9\s\+\#\.]+$/, 'Skills can only contain letters, numbers, spaces, and +#.')
+    )
+    .min(1, 'At least one skill is required')
+    .test('unique-skills', 'Duplicate skills are not allowed', (skills) => {
+      if (!skills) return true;
+      return new Set(skills).size === skills.length;
+    }),
+  type: Yup.string()
+    .oneOf(['jobseeker', 'business'], 'Invalid account type')
+    .required('Account type is required')
 });
 
 // Allowed resume file types
@@ -38,10 +54,6 @@ export default function UserProfile({ user, onClose }) {
   const [{ userInfo }, dispatch] = useStateProvider();
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState(null);
-  const [editedUser, setEditedUser] = useState({
-    ...user,
-    type: user.type || "jobseeker",
-  });
   const [resume, setResume] = useState(null);
 
   const isOwnProfile = userInfo?.id === user?.id;
@@ -52,10 +64,6 @@ export default function UserProfile({ user, onClose }) {
         const response = await axios.get(`${GET_USER_INFO}/${user?.id}`);
         if (response.data.success) {
           setProfileData(response.data.user);
-          setEditedUser((prev) => ({
-            ...prev,
-            ...response.data.user,
-          }));
         }
       } catch (error) {
         console.error("Error fetching user info:", error);
@@ -67,48 +75,60 @@ export default function UserProfile({ user, onClose }) {
     }
   }, [user?.id]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditedUser((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
 
-  const handleSubmit = async (values, { setSubmitting }) => {
+
+  const handleSubmit = async (values, { setSubmitting, setFieldError }) => {
     try {
       setSubmitting(true);
-      const formData = new FormData();
-      
-      // Validate resume file if present
-      if (resume) {
-        if (!ALLOWED_FILE_TYPES.includes(resume.type)) {
-          toast.error('Invalid file type. Please upload a PDF or Word document.');
+
+      // Trim all string values
+      const trimmedValues = Object.entries(values).reduce((acc, [key, value]) => {
+        if (typeof value === 'string') {
+          acc[key] = value.trim();
+        } else if (Array.isArray(value)) {
+          acc[key] = value.map(item => typeof item === 'string' ? item.trim() : item);
+        } else {
+          acc[key] = value;
+        }
+        return acc;
+      }, {});
+
+      // Validate skills
+      if (trimmedValues.skills) {
+        const skillErrors = [];
+        trimmedValues.skills.forEach((skill, index) => {
+          if (skill.length < 2) skillErrors.push(`Skill ${index + 1} is too short`);
+          if (skill.length > 30) skillErrors.push(`Skill ${index + 1} is too long`);
+          if (!/^[a-zA-Z0-9\s\+\#\.]+$/.test(skill)) {
+            skillErrors.push(`Skill ${index + 1} contains invalid characters`);
+          }
+        });
+        if (skillErrors.length > 0) {
+          setFieldError('skills', skillErrors.join(', '));
           return;
         }
-        if (resume.size > MAX_FILE_SIZE) {
-          toast.error('File size too large. Maximum size is 5MB.');
-          return;
-        }
-        formData.append("resume", resume);
       }
 
-      // Append other form data
-      Object.keys(values).forEach((key) => {
-        if (key === "skills" && Array.isArray(values[key])) {
-          formData.append(key, JSON.stringify(values[key]));
-        } else {
-          formData.append(key, values[key]);
+      // Prepare data object
+      const updateData = {
+        ...trimmedValues,
+        userId: user?.id,
+      };
+
+      // Remove any null or undefined values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === null || updateData[key] === undefined) {
+          delete updateData[key];
         }
       });
 
-      const { data } = await axios.post(UPDATE_USER_PROFILE, formData, {
+      const { data } = await axios.post(UPDATE_USER_PROFILE, updateData, {
         headers: {
-          "Content-Type": "multipart/form-data",
+          "Content-Type": "application/json",
         },
       });
-
-      if (data.status) {
+      
+      if (data.success) {
         dispatch({
           type: reducerCases.SET_USER_INFO,
           userInfo: data.user,
@@ -120,7 +140,15 @@ export default function UserProfile({ user, onClose }) {
       }
     } catch (error) {
       console.error("Error updating profile:", error);
-      toast.error(error.response?.data?.message || 'Failed to update profile');
+      if (error.response?.data?.errors) {
+        // Handle validation errors from the server
+        Object.entries(error.response.data.errors).forEach(([field, message]) => {
+          setFieldError(field, message);
+        });
+        toast.error('Please fix the validation errors');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to update profile');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -233,145 +261,213 @@ export default function UserProfile({ user, onClose }) {
           </div>
 
           <div className="space-y-4">
-            {/* User Type */}
-            <div className="border-t border-gray-200 pt-4">
-              <h4 className="text-sm font-medium text-gray-500 mb-2">
-                Account Type
-              </h4>
-              {isEditing ? (
-                <select
-                  name="userType"
-                  value={editedUser.userType || "jobseeker"}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:border-[#1a73e8] focus:outline-none"
-                >
-                  <option value="jobseeker">Job Seeker</option>
-                  <option value="business">Business</option>
-                </select>
-              ) : (
-                <p className="text-gray-800 capitalize">
-                  {profileData?.userType || "Job Seeker"}
-                </p>
-              )}
-            </div>
+            <Formik
+              initialValues={{
+                name: profileData?.name || '',
+                email: profileData?.email || '',
+                phoneNumber: profileData?.phoneNumber || '',
+                about: profileData?.about || '',
+                skills: profileData?.skills || [],
+                type: profileData?.type || 'jobseeker'
+              }}
+              validationSchema={validationSchema}
+              onSubmit={handleSubmit}
+              enableReinitialize
+            >
+              {(formik) => (
+                <Form className="space-y-6">
+                  {/* Name */}
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-gray-500 mb-2">Name</h4>
+                    {isEditing ? (
+                      <div>
+                        <Field
+                          type="text"
+                          name="name"
+                          disabled={true}
+                          placeholder="Your name"
+                          className="w-full p-2 border border-gray-300 rounded-lg focus:border-[#1a73e8] focus:outline-none"
+                        />
+                        <ErrorMessage
+                          name="name"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-gray-800">{profileData?.name}</p>
+                    )}
+                  </div>
 
-            {/* Phone Number */}
-            <div className="border-t border-gray-200 pt-4">
-              <h4 className="text-sm font-medium text-gray-500 mb-2">
-                Phone Number
-              </h4>
-              {isEditing ? (
-                <Field name="phoneNumber">
-                  {({ field, form }) => (
-                    <div>
-                      <PhoneInput
-                        country={'in'}
-                        value={field.value}
-                        onChange={(phone) => form.setFieldValue('phoneNumber', phone)}
-                        inputClass="w-full p-2 border border-gray-300 rounded-lg focus:border-[#1a73e8] focus:outline-none"
-                        containerClass="w-full"
-                        buttonClass="rounded-l-lg"
-                      />
-                      <ErrorMessage
-                        name="phoneNumber"
-                        component="div"
-                        className="text-red-500 text-sm mt-1"
-                      />
-                    </div>
-                  )}
-                </Field>
-              ) : (
-                <p className="text-gray-800">
-                  {profileData?.phoneNumber || "Not provided"}
-                </p>
-              )}
-            </div>
+                  {/* User Type */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="text-sm font-medium text-gray-500 mb-2">
+                      Account Type
+                    </h4>
+                    {isEditing ? (
+                      <select
+                        name="type"
+                        value={formik.values.type}
+                        onChange={formik.handleChange}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:border-[#1a73e8] focus:outline-none"
+                        disabled
+                      >
+                        <option value="jobseeker">Job Seeker</option>
+                        <option value="business">Business</option>
+                      </select>
+                    ) : (
+                      <p className="text-gray-800 capitalize">
+                        {profileData?.type || "Job Seeker"}
+                      </p>
+                    )}
+                  </div>
 
-            {/* About */}
-            <div className="border-t border-gray-200 pt-4">
-              <h4 className="text-sm font-medium text-gray-500 mb-2">About</h4>
-              {isEditing ? (
-                <textarea
-                  name="about"
-                  value={editedUser.about || ""}
-                  onChange={handleInputChange}
-                  placeholder="Tell us about yourself"
-                  rows="3"
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:border-[#1a73e8] focus:outline-none resize-none"
-                />
-              ) : (
-                <p className="text-gray-800">
-                  {profileData?.about || "No description provided"}
-                </p>
-              )}
-            </div>
+                  {/* Phone Number */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="text-sm font-medium text-gray-500 mb-2">
+                      Phone Number
+                    </h4>
+                    {isEditing ? (
+                      <Field name="phoneNumber">
+                        {({ field, form }) => (
+                          <div>
+                            <PhoneInput
+                              country={'in'}
+                              value={field.value}
+                              onChange={(phone) => form.setFieldValue('phoneNumber', phone)}
+                              inputClass="w-full p-2 border border-gray-300 rounded-lg focus:border-[#1a73e8] focus:outline-none"
+                              containerClass="w-full"
+                              buttonClass="rounded-l-lg"
+                            />
+                            <ErrorMessage
+                              name="phoneNumber"
+                              component="div"
+                              className="text-red-500 text-sm mt-1"
+                            />
+                          </div>
+                        )}
+                      </Field>
+                    ) : (
+                      <p className="text-gray-800">
+                        {profileData?.phoneNumber || "Not provided"}
+                      </p>
+                    )}
+                  </div>
 
-            {/* Skills */}
-            <div className="border-t border-gray-200 pt-4">
-              <h4 className="text-sm font-medium text-gray-500 mb-2">Skills</h4>
-              <div className="flex flex-wrap gap-2">
-                {(isEditing ? editedUser.skills : profileData?.skills)?.map(
-                  (skill, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-1 px-3 py-1 bg-[#1a73e8] text-white rounded-full text-sm"
-                    >
-                      {skill}
-                      {isEditing && (
-                        <button
-                          onClick={() => handleSkillRemove(skill)}
-                          className="ml-1 hover:text-red-200"
-                        >
-                          ×
-                        </button>
+                  {/* About */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="text-sm font-medium text-gray-500 mb-2">About</h4>
+                    {isEditing ? (
+                      <div>
+                        <Field
+                          as="textarea"
+                          name="about"
+                          placeholder="Tell us about yourself"
+                          rows="3"
+                          className="w-full p-2 border border-gray-300 rounded-lg focus:border-[#1a73e8] focus:outline-none resize-none"
+                        />
+                        <ErrorMessage
+                          name="about"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-gray-800">
+                        {profileData?.about || "No description provided"}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Email */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="text-sm font-medium text-gray-500 mb-2">Email</h4>
+                    <p className="text-gray-800">{profileData?.email}</p>
+                  </div>
+
+                  {/* Skills */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="text-sm font-medium text-gray-500 mb-2">Skills</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {(isEditing ? formik.values.skills : profileData?.skills)?.map(
+                        (skill, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-1 px-3 py-1 bg-[#1a73e8] text-white rounded-full text-sm"
+                          >
+                            {skill}
+                            {isEditing && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newSkills = formik.values.skills.filter(s => s !== skill);
+                                  formik.setFieldValue('skills', newSkills);
+                                }}
+                                className="ml-1 hover:text-red-200"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        )
                       )}
                     </div>
-                  )
-                )}
-                {isEditing && (
-                  <input
-                    type="text"
-                    placeholder="Add skill (press Enter)"
-                    onKeyPress={handleSkillAdd}
-                    className="flex-1 min-w-[150px] p-2 border border-gray-300 rounded-lg focus:border-[#1a73e8] focus:outline-none"
-                  />
-                )}
-              </div>
-            </div>
+                    {isEditing && (
+                      <input
+                        type="text"
+                        placeholder="Add skill (press Enter)"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && e.target.value.trim()) {
+                            e.preventDefault();
+                            const newSkill = e.target.value.trim();
+                            if (!formik.values.skills.includes(newSkill)) {
+                              formik.setFieldValue('skills', [...formik.values.skills, newSkill]);
+                            }
+                            e.target.value = '';
+                          }
+                        }}
+                        className="flex-1 min-w-[150px] p-2 border border-gray-300 rounded-lg focus:border-[#1a73e8] focus:outline-none"
+                      />
+                    )}
+                  </div>
 
-            {/* Resume */}
-            <div className="border-t border-gray-200 pt-4">
-              <h4 className="text-sm font-medium text-gray-500 mb-2">Resume</h4>
-              <div>
-                {profileData?.resume ? (
-                  <p 
-                    className="text-[#1a73e8] cursor-pointer hover:underline"
-                    onClick={downloadResume}
-                  >
-                    Download Resume
-                  </p>
-                ) : (
-                  <p className="text-gray-600">No resume uploaded</p>
-                )}
-              </div>
-            </div>
+                  {/* Resume */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="text-sm font-medium text-gray-500 mb-2">Resume</h4>
+                    <div>
+                      {profileData?.resume ? (
+                        <p 
+                          className="text-[#1a73e8] cursor-pointer hover:underline"
+                          onClick={downloadResume}
+                        >
+                          Download Resume
+                        </p>
+                      ) : (
+                        <p className="text-gray-600">No resume uploaded</p>
+                      )}
+                    </div>
+                  </div>
 
-            {isEditing && (
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  className="px-4 py-2 text-sm font-medium text-white bg-[#1a73e8] hover:bg-[#1557b0] rounded-lg transition-colors"
-                >
-                  Save Changes
-                </button>
-              </div>
-            )}
+                  {isEditing && (
+                    <div className="flex justify-end gap-3 mt-6">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditing(false)}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 text-sm font-medium text-white bg-[#1a73e8] hover:bg-[#1557b0] rounded-lg transition-colors"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  )}
+                </Form>
+              )}
+            </Formik>
           </div>
         </div>
       </div>
