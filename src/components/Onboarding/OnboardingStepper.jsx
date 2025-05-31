@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { FiUpload, FiCheck } from "react-icons/fi";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import PhoneInput from "@/components/common/PhoneInput";
 
 const OnboardingStepper = () => {
   const router = useRouter();
@@ -95,6 +96,23 @@ const OnboardingStepper = () => {
     }
   };
 
+  const isStepValid = () => {
+    switch (currentStep) {
+      case 0:
+        return formData.userType !== "";
+      case 1:
+        return (
+          formData.name !== "" &&
+          formData.email !== "" &&
+          formData.phone?.length === 10
+        );
+      case 2:
+        return true; // Resume is optional
+      default:
+        return false;
+    }
+  };
+
   const validateStep = () => {
     switch (currentStep) {
       case 0:
@@ -106,6 +124,10 @@ const OnboardingStepper = () => {
       case 1:
         if (!formData.name || !formData.email) {
           toast.error("Name and email are required");
+          return false;
+        }
+        if (!formData.phone || formData.phone.length !== 10) {
+          toast.error("Please enter a valid 10-digit phone number");
           return false;
         }
         return true;
@@ -335,17 +357,14 @@ const OnboardingStepper = () => {
                   className="w-full px-4 py-3 rounded-lg bg-input-background border border-secondary/20 text-primary-strong"
                 />
               </div>
-              <div>
+              <div className="mb-6">
                 <label className="block text-sm font-medium text-secondary mb-2">
-                  Phone Number
+                  Phone Number <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="tel"
-                  name="phone"
+                <PhoneInput
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 rounded-lg bg-input-background border border-secondary/20 text-primary-strong placeholder-secondary/70 focus:ring-2 focus:ring-icon-green focus:border-icon-green transition-all duration-200"
-                  placeholder="Enter your phone number"
+                  required
                 />
               </div>
               <div>
@@ -531,7 +550,10 @@ const OnboardingStepper = () => {
           </button>
           <button
             onClick={nextStep}
-            className="px-6 py-3 text-base font-medium rounded-lg text-primary-strong bg-icon-green hover:bg-icon-green/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-icon-green transition-all duration-200 shadow-lg hover:shadow-xl"
+            disabled={!isStepValid()}
+            className={`px-6 py-3 text-base font-medium rounded-lg transition-all duration-200 shadow-lg ${isStepValid() 
+              ? 'text-primary-strong bg-icon-green hover:bg-icon-green/90 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-icon-green' 
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
           >
             {currentStep === steps.length - 1 ? "Finish" : "Continue"}
           </button>

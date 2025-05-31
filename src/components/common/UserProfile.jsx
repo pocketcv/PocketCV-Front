@@ -4,6 +4,35 @@ import { reducerCases } from "@/context/constants";
 import axios from "axios";
 import { DOWNLOAD_RESUME_ROUTE, GET_USER_INFO, UPDATE_USER_PROFILE } from "@/utils/ApiRoutes";
 import Avatar from "./Avatar";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import * as Yup from "yup";
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import { toast } from 'react-toastify';
+
+// Validation schema
+const validationSchema = Yup.object({
+  name: Yup.string()
+    .min(2, 'Name must be at least 2 characters')
+    .max(50, 'Name must be less than 50 characters')
+    .required('Name is required'),
+  email: Yup.string()
+    .email('Invalid email address')
+    .required('Email is required'),
+  phoneNumber: Yup.string()
+    .required('Phone number is required')
+    .min(10, 'Phone number is too short')
+    .max(20, 'Phone number is too long'),
+  about: Yup.string()
+    .max(500, 'About section must be less than 500 characters'),
+  skills: Yup.array()
+    .of(Yup.string())
+    .min(1, 'At least one skill is required'),
+});
+
+// Allowed resume file types
+const ALLOWED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export default function UserProfile({ user, onClose }) {
   const [{ userInfo }, dispatch] = useStateProvider();
@@ -46,19 +75,32 @@ export default function UserProfile({ user, onClose }) {
     }));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (values, { setSubmitting }) => {
     try {
+      setSubmitting(true);
       const formData = new FormData();
-      Object.keys(editedUser).forEach((key) => {
-        if (key === "skills" && Array.isArray(editedUser[key])) {
-          formData.append(key, JSON.stringify(editedUser[key]));
-        } else {
-          formData.append(key, editedUser[key]);
-        }
-      });
+      
+      // Validate resume file if present
       if (resume) {
+        if (!ALLOWED_FILE_TYPES.includes(resume.type)) {
+          toast.error('Invalid file type. Please upload a PDF or Word document.');
+          return;
+        }
+        if (resume.size > MAX_FILE_SIZE) {
+          toast.error('File size too large. Maximum size is 5MB.');
+          return;
+        }
         formData.append("resume", resume);
       }
+
+      // Append other form data
+      Object.keys(values).forEach((key) => {
+        if (key === "skills" && Array.isArray(values[key])) {
+          formData.append(key, JSON.stringify(values[key]));
+        } else {
+          formData.append(key, values[key]);
+        }
+      });
 
       const { data } = await axios.post(UPDATE_USER_PROFILE, formData, {
         headers: {
@@ -72,9 +114,15 @@ export default function UserProfile({ user, onClose }) {
           userInfo: data.user,
         });
         setIsEditing(false);
+        toast.success('Profile updated successfully!');
+      } else {
+        toast.error(data.message || 'Failed to update profile');
       }
     } catch (error) {
       console.error("Error updating profile:", error);
+      toast.error(error.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -213,14 +261,25 @@ export default function UserProfile({ user, onClose }) {
                 Phone Number
               </h4>
               {isEditing ? (
-                <input
-                  type="text"
-                  name="phoneNumber"
-                  value={editedUser.phoneNumber || ""}
-                  onChange={handleInputChange}
-                  placeholder="Enter phone number"
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:border-[#1a73e8] focus:outline-none"
-                />
+                <Field name="phoneNumber">
+                  {({ field, form }) => (
+                    <div>
+                      <PhoneInput
+                        country={'in'}
+                        value={field.value}
+                        onChange={(phone) => form.setFieldValue('phoneNumber', phone)}
+                        inputClass="w-full p-2 border border-gray-300 rounded-lg focus:border-[#1a73e8] focus:outline-none"
+                        containerClass="w-full"
+                        buttonClass="rounded-l-lg"
+                      />
+                      <ErrorMessage
+                        name="phoneNumber"
+                        component="div"
+                        className="text-red-500 text-sm mt-1"
+                      />
+                    </div>
+                  )}
+                </Field>
               ) : (
                 <p className="text-gray-800">
                   {profileData?.phoneNumber || "Not provided"}

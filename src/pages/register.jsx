@@ -8,17 +8,29 @@ import axios from "axios";
 import { useStateProvider } from "@/context/StateContext";
 import { reducerCases } from "@/context/constants";
 import { useRouter } from "next/router";
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import { toast } from 'react-toastify';
 
 // Validation schema using Yup
 const validationSchema = Yup.object({
-  firstName: Yup.string().required("First Name is required"),
-  lastName: Yup.string().required("Last Name is required"),
+  firstName: Yup.string()
+    .min(2, 'First name must be at least 2 characters')
+    .max(50, 'First name must be less than 50 characters')
+    .matches(/^[a-zA-Z\s]*$/, 'First name can only contain letters')
+    .required('First Name is required'),
+  lastName: Yup.string()
+    .min(2, 'Last name must be at least 2 characters')
+    .max(50, 'Last name must be less than 50 characters')
+    .matches(/^[a-zA-Z\s]*$/, 'Last name can only contain letters')
+    .required('Last Name is required'),
   email: Yup.string()
-    .email("Invalid email address")
-    .required("Email is required"),
+    .email('Invalid email address')
+    .required('Email is required'),
   phoneNumber: Yup.string()
-    .matches(/^\d{10}$/, "Phone Number must be exactly 10 digits")
-    .required("Phone Number is required"),
+    .required('Phone Number is required')
+    .min(10, 'Phone number is too short')
+    .max(20, 'Phone number is too long'),
 });
 
 export default function Register() {
@@ -98,18 +110,31 @@ export default function Register() {
                 phoneNumber: "",
               }}
               validationSchema={validationSchema}
-              onSubmit={async (values) => {
-                // Handle form submission
-                values.name = `${values.firstName} ${values.lastName}`;
-                delete values.firstName;
-                delete values.lastName;
+              onSubmit={async (values, { setSubmitting }) => {
+                try {
+                  setSubmitting(true);
+                  // Handle form submission
+                  const formData = {
+                    name: `${values.firstName} ${values.lastName}`,
+                    email: values.email,
+                    phoneNumber: values.phoneNumber,
+                    userType: lookingFor
+                  };
 
-                values.userType = lookingFor;
+                  const { data } = await axios.post(onRegisterUserRoute, formData);
 
-                const { data } = await axios.post(onRegisterUserRoute, values);
-
-                checkUser(values?.email);
-
+                  if (data.success) {
+                    toast.success('Registration successful!');
+                    await checkUser(values.email);
+                  } else {
+                    toast.error(data.message || 'Registration failed');
+                  }
+                } catch (error) {
+                  console.error('Registration error:', error);
+                  toast.error(error.response?.data?.message || 'Registration failed');
+                } finally {
+                  setSubmitting(false);
+                }
               }}
             >
               {() => (
@@ -140,12 +165,27 @@ export default function Register() {
                     component={RegistrationInput}
                   />
 
-                  <Field
-                    name="phoneNumber"
-                    type="tel"
-                    placeholder="Phone Number"
-                    component={RegistrationInput}
-                  />
+                  <div className="mb-4">
+                    <Field name="phoneNumber">
+                      {({ field, form }) => (
+                        <div>
+                          <PhoneInput
+                            country={'in'}
+                            value={field.value}
+                            onChange={(phone) => form.setFieldValue('phoneNumber', phone)}
+                            inputClass="w-full p-2 border rounded-lg focus:border-green-500 outline-none"
+                            containerClass="w-full"
+                            buttonClass="rounded-l-lg"
+                          />
+                          <ErrorMessage
+                            name="phoneNumber"
+                            component="div"
+                            className="text-red-500 text-sm mt-1"
+                          />
+                        </div>
+                      )}
+                    </Field>
+                  </div>
 
                   {/* Skill column */}
                   <label className="text-xs text-gray-500 -top-2 mt-2 bg-white px-1">

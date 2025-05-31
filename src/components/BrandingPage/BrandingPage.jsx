@@ -588,7 +588,7 @@ const BrandingPage = () => {
           </div>
         </button>
       )}
-      <ChatAssistant title="Chat with Assistant" />
+      {/* <ChatAssistant title="Chat with Assistant" /> */}
       <Footer />
     </div>
   )
