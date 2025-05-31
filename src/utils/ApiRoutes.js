@@ -1,4 +1,4 @@
-export const HOST = "http://localhost:9001";
+export const HOST = "https://pocket-cv-backend-six.vercel.app";
 
 const authRoute = `${HOST}/api/auth`;
 const MESSAGES_ROUTE = `${HOST}/api/messages`;
